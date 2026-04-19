@@ -1,0 +1,105 @@
+
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    <title>CA Meetup +</title>
+    <link rel="icon" type="image/x-icon" href="https://app.fullertonpogo.com/images/meetup-plus.ico" />
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700;800&display=swap" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+      tailwind.config = {
+        theme: {
+          extend: {
+            colors: {
+              gray: {
+                850: '#1f2937',
+                900: '#111827',
+                950: '#0B0F19',
+              },
+              primary: {
+                DEFAULT: '#f26e1d', // Fullerton Go Orange
+                dim: '#d65a12',
+              },
+              niantic: {
+                DEFAULT: '#3ddc84', // Specific green for redeem button
+                dim: '#2ea863',
+              },
+              accent: {
+                DEFAULT: '#e94560',
+                dim: '#b52b41'
+              }
+            },
+            borderWidth: {
+              DEFAULT: '2px',
+              '0': '0',
+              '2': '2px',
+              '4': '4px',
+              '8': '8px',
+            },
+            borderRadius: {
+              'none': '0',
+              'sm': '0',
+              DEFAULT: '0',
+              'md': '0',
+              'lg': '0',
+              'xl': '0',
+              '2xl': '0',
+              '3xl': '0',
+              'full': '9999px', // Keep full for circles
+            },
+            boxShadow: {
+              'sm': '2px 2px 0px 0px var(--tw-shadow-color, rgba(0, 0, 0, 1))',
+              DEFAULT: '3px 3px 0px 0px var(--tw-shadow-color, rgba(0, 0, 0, 1))',
+              'md': '4px 4px 0px 0px var(--tw-shadow-color, rgba(0, 0, 0, 1))',
+              'lg': '5px 5px 0px 0px var(--tw-shadow-color, rgba(0, 0, 0, 1))',
+              'xl': '6px 6px 0px 0px var(--tw-shadow-color, rgba(0, 0, 0, 1))',
+              '2xl': '8px 8px 0px 0px var(--tw-shadow-color, rgba(0, 0, 0, 1))',
+              'inner': 'inset 3px 3px 0px 0px var(--tw-shadow-color, rgba(0, 0, 0, 0.5))',
+              'none': '0 0 #0000',
+              'brutal': '3px 3px 0px 0px var(--tw-shadow-color, rgba(0, 0, 0, 1))',
+              'brutal-sm': '2px 2px 0px 0px var(--tw-shadow-color, rgba(0, 0, 0, 1))',
+              'brutal-white': '3px 3px 0px 0px var(--tw-shadow-color, rgba(255, 255, 255, 0.15))',
+              'brutal-black': '3px 3px 0px 0px var(--tw-shadow-color, rgba(0, 0, 0, 1))',
+              'brutal-green': '3px 3px 0px 0px var(--tw-shadow-color, rgba(61, 220, 132, 0.2))',
+            },
+            fontFamily: {
+              sans: ['"JetBrains Mono"', 'monospace'],
+              mono: ['"JetBrains Mono"', 'monospace'],
+            },
+            animation: {
+              'pulse-slow': 'pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+            }
+          }
+        }
+      }
+    </script>
+  <script type="importmap">
+{
+  "imports": {
+    "vite": "https://esm.sh/vite@^7.3.0",
+    "@vitejs/plugin-react": "https://esm.sh/@vitejs/plugin-react@^5.1.2",
+    "uuid": "https://esm.sh/uuid@^13.0.0",
+    "react-router-dom": "https://esm.sh/react-router-dom@^7.10.1",
+    "react-dom/": "https://esm.sh/react-dom@^19.2.3/",
+    "lucide-react": "https://esm.sh/lucide-react@^0.561.0",
+    "react/": "https://esm.sh/react@^19.2.3/",
+    "react": "https://esm.sh/react@^19.2.3",
+    "firebase/": "https://esm.sh/firebase@^12.6.0/",
+    "qrcode.react": "https://esm.sh/qrcode.react@^4.2.0",
+    "framer-motion": "https://esm.sh/framer-motion@^12.23.26",
+    "canvas-confetti": "https://esm.sh/canvas-confetti@^1.9.4",
+    "html2canvas": "https://esm.sh/html2canvas@^1.4.1"
+  }
+}
+</script>
+<link rel="stylesheet" href="/index.css">
+</head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/index.tsx"></script>
+  </body>
+</html>

@@ -1,0 +1,55 @@
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+html, body, #root {
+  height: 100%;
+  margin: 0;
+  padding: 0;
+}
+body {
+  background-color: #0B0F19;
+  background-image: radial-gradient(#1f2937 1.5px, transparent 1.5px);
+  background-size: 24px 24px;
+  color: #ffffff;
+  overscroll-behavior: none;
+  font-family: 'JetBrains Mono', monospace;
+}
+
+/* Hide scrollbar for clean mobile look */
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+/* Moving Gradient Animation */
+.animate-gradient-text {
+  background: linear-gradient(to right, #f26e1d, #a855f7, #f26e1d);
+  background-size: 200% auto;
+  color: #f26e1d; /* Fallback */
+  color: transparent;
+  -webkit-background-clip: text;
+  background-clip: text;
+  animation: gradientMove 3s linear infinite;
+}
+
+@keyframes gradientMove {
+  to {
+    background-position: 200% center;
+  }
+}
+
+/* Print Styles */
+@media print {
+    body {
+        background-color: white !important;
+        color: black !important;
+    }
+    #root {
+        height: auto;
+    }
+}
