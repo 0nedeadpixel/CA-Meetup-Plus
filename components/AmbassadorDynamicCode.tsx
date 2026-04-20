@@ -15,41 +15,43 @@ export const AmbassadorDynamicCode: React.FC = () => {
         const checkSessions = async () => {
             if (!hostId) return;
             try {
-                // Fetch ONLY by hostDevice to avoid ANY composite index requirements
-                const legacyQuery = query(
+                // 1. Fetch ALL active sessions globally (very cheap) and filter client-side 
+                // This bypasses any strict Firebase Composite Indexing rules completely!
+                const activeQuery = query(
                     collection(db, 'sessions'),
-                    where('hostDevice', '==', hostId)
+                    where('active', '==', true)
                 );
                 
-                const altQuery = query(
-                    collection(db, 'sessions'),
-                    where('hostAlternativeIds', 'array-contains', hostId)
-                );
+                const activeSnap = await getDocs(activeQuery).catch(() => ({ empty: true, docs: [] }));
                 
-                const [legacySnap, altSnap] = await Promise.all([
-                    getDocs(legacyQuery),
-                    getDocs(altQuery).catch(() => ({ empty: true, docs: [] })) // In case field is entirely missing
-                ]);
-                
-                if (!legacySnap.empty || !altSnap.empty) {
-                    const docsMap = new Map();
-                    if (!legacySnap.empty) legacySnap.docs.forEach(d => docsMap.set(d.id, { id: d.id, ...d.data() }));
-                    if (!altSnap.empty) (altSnap as any).docs.forEach((d: any) => docsMap.set(d.id, { id: d.id, ...d.data() }));
+                if (!activeSnap.empty) {
+                    const allActiveDocs = (activeSnap as any).docs.map((d: any) => ({ id: d.id, ...d.data() }));
                     
-                    const docs = Array.from(docsMap.values()) as any[];
+                    // Client-side exact match against legacy or alternative IPs
+                    const myActiveSession = allActiveDocs.find((d: any) => 
+                        d.hostDevice === hostId || 
+                        (Array.isArray(d.hostAlternativeIds) && d.hostAlternativeIds.includes(hostId))
+                    );
                     
-                    // Manually find active session here to bypass building Firebase composites
-                    const activeSession = docs.find(d => d.active === true);
-                    
-                    if (activeSession) {
-                        navigate(`/session/${activeSession.id}`);
+                    if (myActiveSession) {
+                        navigate(`/session/${myActiveSession.id}`);
                         return;
                     }
+                }
+                
+                // 2. If no active session found, try to fetch their history JUST for the profile info
+                const legacyQuery = query(collection(db, 'sessions'), where('hostDevice', '==', hostId));
+                const legacySnap = await getDocs(legacyQuery).catch(() => ({ empty: true, docs: [] }));
+                
+                if (!legacySnap.empty) {
+                    const docsMap = new Map();
+                    (legacySnap as any).docs.forEach((d: any) => docsMap.set(d.id, { id: d.id, ...d.data() }));
+                    const docs = Array.from(docsMap.values()) as any[];
                     
                     // If no active session, sort locally by date to find newest for profile info
-                    docs.sort((a, b) => {
-                        const aTime = a.createdAt?.seconds || 0;
-                        const bTime = b.createdAt?.seconds || 0;
+                    docs.sort((a: any, b: any) => {
+                        const aTime = a.createdAt?.seconds || a.createdAt || 0;
+                        const bTime = b.createdAt?.seconds || b.createdAt || 0;
                         return bTime - aTime;
                     });
                     
