@@ -15,41 +15,35 @@ export const AmbassadorDynamicCode: React.FC = () => {
         const checkSessions = async () => {
             if (!hostId) return;
             try {
-                const distQuery = query(
-                    collection(db, 'sessions'),
-                    where('hostDevice', '==', hostId),
-                    where('active', '==', true),
-                    limit(1)
-                );
-                
-                const distSnap = await getDocs(distQuery);
-                
-                if (!distSnap.empty) {
-                    const session = distSnap.docs[0];
-                    navigate(`/session/${session.id}`);
-                    return;
-                }
-
-                // If no active session, fetch the most recent session from this host for profile info
+                // Fetch ONLY by hostDevice to avoid ANY composite index requirements
                 const recentQuery = query(
                     collection(db, 'sessions'),
                     where('hostDevice', '==', hostId)
                 );
                 
-                // Fetch up to 10 and sort locally to avoid missing index for createdAt
                 const recentSnap = await getDocs(recentQuery);
                 
                 if (!recentSnap.empty) {
-                    const docs = recentSnap.docs.map(d => d.data());
+                    const docs = recentSnap.docs.map(d => ({ id: d.id, ...d.data() })) as any[];
+                    
+                    // Manually find active session here to bypass building Firebase composites
+                    const activeSession = docs.find(d => d.active === true);
+                    
+                    if (activeSession) {
+                        navigate(`/session/${activeSession.id}`);
+                        return;
+                    }
+                    
+                    // If no active session, sort locally by date to find newest for profile info
                     docs.sort((a, b) => {
                         const aTime = a.createdAt?.seconds || 0;
                         const bTime = b.createdAt?.seconds || 0;
                         return bTime - aTime;
                     });
                     
-                    const sessionData = docs[0];
-                    if (sessionData.ambassador) {
-                        setAmbassadorInfo(sessionData.ambassador);
+                    const newestSession = docs[0];
+                    if (newestSession.ambassador) {
+                        setAmbassadorInfo(newestSession.ambassador);
                     }
                 }
                 
