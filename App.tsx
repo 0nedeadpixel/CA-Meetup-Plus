@@ -75,6 +75,14 @@ const App: React.FC = () => {
     localStorage.setItem('pogo_settings', JSON.stringify(settings));
   }, [settings]);
 
+  useEffect(() => {
+    let id = localStorage.getItem('pogo_device_id');
+    if (!id || id === 'host' || id === 'unknown') {
+      id = uuidv4();
+      localStorage.setItem('pogo_device_id', id);
+    }
+  }, []);
+
   const handleAddCodes = (rawText: string, preMarkedUsedData: Record<string, any> = {}) => {
     const rawList = rawText.split(/[\n,\s]+/).map(s => s.replace(/['"]/g, '').trim()).filter(s => s);
     const uniqueRawList = Array.from(new Set(rawList));
