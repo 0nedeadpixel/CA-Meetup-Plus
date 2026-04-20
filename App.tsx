@@ -258,7 +258,7 @@ const App: React.FC = () => {
 
       <Suspense fallback={<LoadingScreen />}>
         <Routes>
-          <Route path="/" element={<Hub settings={settings} onUpdateSettings={setSettings} onRecoverCodes={handleRecoverCodes} />} />
+          <Route path="/" element={<Hub codes={codes} onUpdateCodes={setCodes} settings={settings} onUpdateSettings={setSettings} onRecoverCodes={handleRecoverCodes} />} />
           
           <Route path="/distributor" element={
               <Dashboard 
