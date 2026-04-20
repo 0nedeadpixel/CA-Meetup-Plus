@@ -16,15 +16,27 @@ export const AmbassadorDynamicCode: React.FC = () => {
             if (!hostId) return;
             try {
                 // Fetch ONLY by hostDevice to avoid ANY composite index requirements
-                const recentQuery = query(
+                const legacyQuery = query(
                     collection(db, 'sessions'),
                     where('hostDevice', '==', hostId)
                 );
                 
-                const recentSnap = await getDocs(recentQuery);
+                const altQuery = query(
+                    collection(db, 'sessions'),
+                    where('hostAlternativeIds', 'array-contains', hostId)
+                );
                 
-                if (!recentSnap.empty) {
-                    const docs = recentSnap.docs.map(d => ({ id: d.id, ...d.data() })) as any[];
+                const [legacySnap, altSnap] = await Promise.all([
+                    getDocs(legacyQuery),
+                    getDocs(altQuery).catch(() => ({ empty: true, docs: [] })) // In case field is entirely missing
+                ]);
+                
+                if (!legacySnap.empty || !altSnap.empty) {
+                    const docsMap = new Map();
+                    if (!legacySnap.empty) legacySnap.docs.forEach(d => docsMap.set(d.id, { id: d.id, ...d.data() }));
+                    if (!altSnap.empty) (altSnap as any).docs.forEach((d: any) => docsMap.set(d.id, { id: d.id, ...d.data() }));
+                    
+                    const docs = Array.from(docsMap.values()) as any[];
                     
                     // Manually find active session here to bypass building Firebase composites
                     const activeSession = docs.find(d => d.active === true);
@@ -42,7 +54,7 @@ export const AmbassadorDynamicCode: React.FC = () => {
                     });
                     
                     const newestSession = docs[0];
-                    if (newestSession.ambassador) {
+                    if (newestSession && newestSession.ambassador) {
                         setAmbassadorInfo(newestSession.ambassador);
                     }
                 }

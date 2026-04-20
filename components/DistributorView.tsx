@@ -150,6 +150,7 @@ export const DistributorView: React.FC<DistributorProps> = ({ codes, onSessionCo
                 createdAt: serverTimestamp(),
                 totalCodes: codesToUpload.length,
                 hostDevice: discordUser?.id || auth.currentUser?.uid || localStorage.getItem('pogo_device_id') || 'unknown',
+                hostAlternativeIds: [discordUser?.id, auth.currentUser?.uid, localStorage.getItem('pogo_device_id')].filter(Boolean),
                 distributionCap: settings.distributionCap,
                 blockIncognito: settings.blockIncognito || false,
                 isTestSession: settings.testMode,
