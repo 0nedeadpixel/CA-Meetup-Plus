@@ -14,6 +14,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { ConfirmationModal } from './ConfirmationModal';
 import { useToast } from './ToastContext';
 import { InfoModal } from './InfoModal';
+import { useDiscordAuth } from './useDiscordAuth';
 
 // Fix for framer-motion type mismatch
 const MotionDiv = motion.div as any;
@@ -39,6 +40,7 @@ interface DistributorProps {
 }
 
 export const DistributorView: React.FC<DistributorProps> = ({ codes, onSessionComplete, onExit, settings }) => {
+  const { user: discordUser } = useDiscordAuth();
   // If we are "resuming" a session, we need to check local storage for the ID, otherwise generate new
   const [sessionId, setSessionId] = useState<string>(() => {
       const active = localStorage.getItem('pogo_last_active_session');
@@ -147,7 +149,7 @@ export const DistributorView: React.FC<DistributorProps> = ({ codes, onSessionCo
                 paused: false,
                 createdAt: serverTimestamp(),
                 totalCodes: codesToUpload.length,
-                hostDevice: auth.currentUser?.uid || localStorage.getItem('pogo_device_id') || 'unknown',
+                hostDevice: discordUser?.id || auth.currentUser?.uid || localStorage.getItem('pogo_device_id') || 'unknown',
                 distributionCap: settings.distributionCap,
                 blockIncognito: settings.blockIncognito || false,
                 isTestSession: settings.testMode,
