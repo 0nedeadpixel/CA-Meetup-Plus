@@ -17,6 +17,7 @@ import { ConfirmationModal } from './ConfirmationModal';
 import { RecoveryRequestsManager } from './RecoveryRequestsManager';
 import { DatabaseCleanup } from './DatabaseCleanup';
 import { useToast } from './ToastContext';
+import { useDiscordAuth } from './useDiscordAuth';
 
 interface DashboardProps {
   codes: CodeItem[];
@@ -60,6 +61,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
   const navigate = useNavigate();
   const location = useLocation();
   const { addToast } = useToast();
+  const { user: discordUser } = useDiscordAuth();
   const [inputText, setInputText] = useState('');
   const [viewState, setViewState] = useState<'HOME' | 'SETTINGS' | 'USED_LIST' | 'UNUSED_LIST' | 'ANALYTICS'>(
     (location.state as any)?.tab === 'RECOVERY_REQUESTS' ? 'ANALYTICS' : 'HOME'
@@ -854,7 +856,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
             <div className="bg-white p-8 shadow-2xl mb-8 relative">
                 <div className="absolute -top-4 -left-4 bg-primary text-gray-900 text-[10px] font-black tracking-widest uppercase px-3 py-1 shadow-lg transform -rotate-2">Printed / Static</div>
                 <QRCodeSVG 
-                    value={`${window.location.origin}/a/${currentUser?.uid || localStorage.getItem('pogo_device_id') || 'host'}`} 
+                    value={`${window.location.origin}/a/${discordUser?.id || currentUser?.uid || localStorage.getItem('pogo_device_id') || 'host'}`} 
                     size={250} 
                     level="H"
                 />
