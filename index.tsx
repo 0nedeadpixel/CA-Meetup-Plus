@@ -60,6 +60,15 @@ if (!rootElement) {
   throw new Error("Could not find root element to mount to");
 }
 
+// Ensure deep links without a hash (e.g. legacy printed codes) are forwarded to the HashRouter
+if (window.location.pathname && window.location.pathname.length > 1) {
+  const hash = window.location.hash;
+  if (!hash) {
+    const newUrl = window.location.origin + '/#' + window.location.pathname + window.location.search;
+    window.location.replace(newUrl);
+  }
+}
+
 const root = ReactDOM.createRoot(rootElement);
 root.render(
   <React.StrictMode>

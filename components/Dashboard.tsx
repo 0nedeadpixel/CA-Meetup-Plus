@@ -856,7 +856,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
             <div className="bg-white p-8 shadow-2xl mb-8 relative">
                 <div className="absolute -top-4 -left-4 bg-primary text-gray-900 text-[10px] font-black tracking-widest uppercase px-3 py-1 shadow-lg transform -rotate-2">Printed / Static</div>
                 <QRCodeSVG 
-                    value={`${window.location.origin}/a/${discordUser?.id || currentUser?.uid || localStorage.getItem('pogo_device_id') || 'host'}`} 
+                    value={`${window.location.origin}/#/a/${discordUser?.id || currentUser?.uid || localStorage.getItem('pogo_device_id') || 'host'}`} 
                     size={250} 
                     level="H"
                 />
