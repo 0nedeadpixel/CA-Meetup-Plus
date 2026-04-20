@@ -4,7 +4,7 @@ import react from '@vitejs/plugin-react';
 
 export default defineConfig({
   plugins: [react()],
-  base: '/', // Changed from './' to '/' to fix MIME type errors on nested routes
+  base: './', // Ensures assets are loaded relatively (Fixes blank screen on Siteground subfolders)
   server: {
     host: true // Enables Network/Mobile testing on localhost
   },

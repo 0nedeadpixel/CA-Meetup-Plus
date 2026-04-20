@@ -19,7 +19,6 @@ const ScavengerHuntLobby = React.lazy(() => import('./components/ScavengerHuntLo
 const TriviaView = React.lazy(() => import('./components/TriviaView').then(module => ({ default: module.TriviaView })));
 const TriviaLobby = React.lazy(() => import('./components/TriviaLobby').then(module => ({ default: module.TriviaLobby })));
 const TrainerLanding = React.lazy(() => import('./components/TrainerLanding').then(module => ({ default: module.TrainerLanding })));
-const AmbassadorDynamicCode = React.lazy(() => import('./components/AmbassadorDynamicCode').then(module => ({ default: module.AmbassadorDynamicCode })));
 
 const LoadingScreen = () => (
   <div className="min-h-screen bg-gray-950 flex flex-col items-center justify-center text-white">
@@ -74,14 +73,6 @@ const App: React.FC = () => {
   useEffect(() => {
     localStorage.setItem('pogo_settings', JSON.stringify(settings));
   }, [settings]);
-
-  useEffect(() => {
-    let id = localStorage.getItem('pogo_device_id');
-    if (!id || id === 'host' || id === 'unknown') {
-      id = uuidv4();
-      localStorage.setItem('pogo_device_id', id);
-    }
-  }, []);
 
   const handleAddCodes = (rawText: string, preMarkedUsedData: Record<string, any> = {}) => {
     const rawList = rawText.split(/[\n,\s]+/).map(s => s.replace(/['"]/g, '').trim()).filter(s => s);
@@ -312,7 +303,6 @@ const App: React.FC = () => {
           <Route path="/trivia/play/:sessionId" element={<TriviaLobby />} />
           
           <Route path="/community" element={<TrainerLanding />} />
-          <Route path="/a/:hostId" element={<AmbassadorDynamicCode />} />
 
           <Route path="/claim/:codeId/:codeValue" element={<RedeemPage />} />
           <Route path="/session/:sessionId" element={<RedeemPage />} />

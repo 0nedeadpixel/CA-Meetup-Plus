@@ -3,7 +3,6 @@ import React, { useState, useRef, useEffect } from 'react';
 import { CodeItem, AppSettings, SessionData, UserRole } from '../types';
 import { Button } from './Button';
 import { Play, Upload, Trash2, Settings, Download, Plus, Share2, ArrowLeft, Eye, Copy, VenetianMask, Search, Radio, ExternalLink, FlaskConical, Gauge, Image as ImageIcon, Flame, Users, AlertTriangle, BarChart3, TrendingUp, Lock, ShieldAlert, Database, X, RefreshCw, LayoutGrid, LogOut, List, Check, PenLine, Zap, QrCode } from 'lucide-react';
-import { QRCodeSVG } from 'qrcode.react';
 // @ts-ignore
 import { doc, onSnapshot, getDocs, collection, deleteDoc, orderBy, query, limit, where, getDoc, collectionGroup } from 'firebase/firestore';
 // @ts-ignore
@@ -17,7 +16,6 @@ import { ConfirmationModal } from './ConfirmationModal';
 import { RecoveryRequestsManager } from './RecoveryRequestsManager';
 import { DatabaseCleanup } from './DatabaseCleanup';
 import { useToast } from './ToastContext';
-import { useDiscordAuth } from './useDiscordAuth';
 
 interface DashboardProps {
   codes: CodeItem[];
@@ -61,7 +59,6 @@ export const Dashboard: React.FC<DashboardProps> = ({
   const navigate = useNavigate();
   const location = useLocation();
   const { addToast } = useToast();
-  const { user: discordUser } = useDiscordAuth();
   const [inputText, setInputText] = useState('');
   const [viewState, setViewState] = useState<'HOME' | 'SETTINGS' | 'USED_LIST' | 'UNUSED_LIST' | 'ANALYTICS'>(
     (location.state as any)?.tab === 'RECOVERY_REQUESTS' ? 'ANALYTICS' : 'HOME'
@@ -105,7 +102,6 @@ export const Dashboard: React.FC<DashboardProps> = ({
 
   const [sessionToDelete, setSessionToDelete] = useState<string | null>(null);
   const [codeToDelete, setCodeToDelete] = useState<string | null>(null);
-  const [showPermanentQr, setShowPermanentQr] = useState(false);
 
   useEffect(() => {
       const sessionId = localStorage.getItem('pogo_last_active_session');
@@ -851,33 +847,6 @@ export const Dashboard: React.FC<DashboardProps> = ({
         </div>
       )}
 
-      {showPermanentQr && (
-        <div className="fixed inset-0 z-50 bg-black/90 flex items-center justify-center p-6 flex-col">
-            <div className="bg-white p-8 shadow-2xl mb-8 relative">
-                <div className="absolute -top-4 -left-4 bg-primary text-gray-900 text-[10px] font-black tracking-widest uppercase px-3 py-1 shadow-lg transform -rotate-2">Printed / Static</div>
-                <QRCodeSVG 
-                    value={`${window.location.origin}/#/a/${discordUser?.id || currentUser?.uid || localStorage.getItem('pogo_device_id') || 'host'}`} 
-                    size={250} 
-                    level="H"
-                />
-            </div>
-            
-            <div className="max-w-xs text-center space-y-4">
-                <h3 className="text-xl font-bold uppercase italic text-primary">Your Permanent QR Code</h3>
-                <p className="text-sm text-gray-400 leading-relaxed">
-                    Print this QR code. It will <b className="text-gray-200">automatically route</b> players to your active Session when one is running!
-                </p>
-                <p className="text-[10px] text-gray-500 bg-gray-900 border border-gray-800 p-3 text-left">
-                    If no session is running, players will see a "No active event" message and your community link.
-                </p>
-                
-                <div className="pt-4 flex gap-3">
-                    <Button fullWidth variant="secondary" onClick={() => setShowPermanentQr(false)}>Close</Button>
-                </div>
-            </div>
-        </div>
-      )}
-
       <div className="p-4 border-b border-gray-800 flex items-center justify-between bg-gray-900 sticky top-0 z-30">
         <div className="flex items-center gap-4"><button onClick={() => navigate('/')} className="p-2 bg-gray-800 rounded-full text-gray-400 hover:text-white border border-gray-700"><ArrowLeft size={20}/></button><div><h1 className="text-xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-primary to-blue-400">Distributor</h1><p className="text-xs text-gray-500">Dashboard</p></div></div>
         <div className="flex gap-2"><button onClick={handleShareApp} className="p-2 bg-gray-800 rounded-full text-gray-400 hover:text-white border border-gray-700"><Share2 size={20} /></button><button onClick={() => setViewState('SETTINGS')} className="p-2 bg-gray-800 rounded-full text-gray-400 hover:text-white border border-gray-700"><Settings size={20} /></button></div>
@@ -894,13 +863,10 @@ export const Dashboard: React.FC<DashboardProps> = ({
             <div className="bg-gray-900 p-4 border border-gray-800 cursor-pointer hover:border-gray-700 transition-colors group" onClick={() => usedCount > 0 && setViewState('USED_LIST')}><div className="text-4xl font-bold text-gray-600 mb-1 flex items-center gap-2 group-hover:text-gray-500">{usedCount}{usedCount > 0 && <Eye size={16} className="text-gray-500 group-hover:text-gray-400" />}</div><div className="text-xs text-gray-500 uppercase tracking-wider group-hover:text-gray-400">Redeemed (View)</div></div>
         </div>
         {!activeSession && unusedCount > 0 && (
-            <div className="mb-4">
+            <div className="mb-8">
                 <Button fullWidth icon={<Play size={20} />} onClick={onStartSession} className="h-16 text-lg">Start New Session</Button>
             </div>
         )}
-        <div className="mb-8">
-            <Button variant="ghost" fullWidth icon={<QrCode size={18} />} onClick={() => setShowPermanentQr(true)} className="border border-gray-800 text-gray-400">View Permanent QR Code</Button>
-        </div>
         <div className="bg-gray-900 p-4 border border-gray-800 mb-6"><h3 className="font-bold mb-3 flex items-center gap-2"><Plus size={16} className="text-primary"/> Add Codes</h3><textarea value={inputText} onChange={(e) => setInputText(e.target.value)} placeholder="Paste codes here..." className="w-full bg-gray-950 text-white p-3 min-h-[100px] border border-gray-800 focus:border-primary outline-none mb-3 text-sm font-mono" /><div className="flex gap-2"><Button variant="secondary" onClick={handleAdd} className="flex-1">Add</Button><input type="file" ref={fileInputRef} accept=".txt,.csv" className="hidden" onChange={handleFileUpload} /><Button variant="secondary" onClick={() => fileInputRef.current?.click()}><Upload size={18} /></Button></div></div>
         <div className="grid grid-cols-1 gap-3">
             {unusedCount > 0 && (<Button variant="ghost" className="justify-start border border-gray-800" icon={<Download size={16}/>} onClick={exportUnused}>Export Unused Codes</Button>)}

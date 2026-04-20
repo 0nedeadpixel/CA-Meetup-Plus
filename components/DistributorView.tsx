@@ -6,7 +6,7 @@ import { QRCodeSVG } from 'qrcode.react';
 import { doc, writeBatch, collection, onSnapshot, query, where, getDocs, setDoc, updateDoc, serverTimestamp, getDoc, runTransaction, orderBy, limit, increment } from 'firebase/firestore';
 // @ts-ignore
 import { logEvent } from 'firebase/analytics';
-import { db, analytics, auth } from '../firebase';
+import { db, analytics } from '../firebase';
 import { CodeItem, AppSettings, ReportItem, SessionData } from '../types';
 import { Button } from './Button';
 import { Check, Wifi, ArrowLeft, Loader2, Zap, AlertTriangle, Printer, PauseCircle, PlayCircle, StopCircle, Copy, AlertCircle, RefreshCw, Download, X, Edit2, Save, Link as LinkIcon, Maximize2, XCircle, User } from 'lucide-react';
@@ -14,7 +14,6 @@ import { v4 as uuidv4 } from 'uuid';
 import { ConfirmationModal } from './ConfirmationModal';
 import { useToast } from './ToastContext';
 import { InfoModal } from './InfoModal';
-import { useDiscordAuth } from './useDiscordAuth';
 
 // Fix for framer-motion type mismatch
 const MotionDiv = motion.div as any;
@@ -40,7 +39,6 @@ interface DistributorProps {
 }
 
 export const DistributorView: React.FC<DistributorProps> = ({ codes, onSessionComplete, onExit, settings }) => {
-  const { user: discordUser } = useDiscordAuth();
   // If we are "resuming" a session, we need to check local storage for the ID, otherwise generate new
   const [sessionId, setSessionId] = useState<string>(() => {
       const active = localStorage.getItem('pogo_last_active_session');
@@ -149,8 +147,7 @@ export const DistributorView: React.FC<DistributorProps> = ({ codes, onSessionCo
                 paused: false,
                 createdAt: serverTimestamp(),
                 totalCodes: codesToUpload.length,
-                hostDevice: discordUser?.id || auth.currentUser?.uid || localStorage.getItem('pogo_device_id') || 'unknown',
-                hostAlternativeIds: [discordUser?.id, auth.currentUser?.uid, localStorage.getItem('pogo_device_id')].filter(Boolean),
+                hostDevice: localStorage.getItem('pogo_device_id') || 'unknown',
                 distributionCap: settings.distributionCap,
                 blockIncognito: settings.blockIncognito || false,
                 isTestSession: settings.testMode,
