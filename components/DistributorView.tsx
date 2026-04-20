@@ -6,7 +6,7 @@ import { QRCodeSVG } from 'qrcode.react';
 import { doc, writeBatch, collection, onSnapshot, query, where, getDocs, setDoc, updateDoc, serverTimestamp, getDoc, runTransaction, orderBy, limit, increment } from 'firebase/firestore';
 // @ts-ignore
 import { logEvent } from 'firebase/analytics';
-import { db, analytics } from '../firebase';
+import { db, analytics, auth } from '../firebase';
 import { CodeItem, AppSettings, ReportItem, SessionData } from '../types';
 import { Button } from './Button';
 import { Check, Wifi, ArrowLeft, Loader2, Zap, AlertTriangle, Printer, PauseCircle, PlayCircle, StopCircle, Copy, AlertCircle, RefreshCw, Download, X, Edit2, Save, Link as LinkIcon, Maximize2, XCircle, User } from 'lucide-react';
@@ -147,7 +147,7 @@ export const DistributorView: React.FC<DistributorProps> = ({ codes, onSessionCo
                 paused: false,
                 createdAt: serverTimestamp(),
                 totalCodes: codesToUpload.length,
-                hostDevice: localStorage.getItem('pogo_device_id') || 'unknown',
+                hostDevice: auth.currentUser?.uid || localStorage.getItem('pogo_device_id') || 'unknown',
                 distributionCap: settings.distributionCap,
                 blockIncognito: settings.blockIncognito || false,
                 isTestSession: settings.testMode,
