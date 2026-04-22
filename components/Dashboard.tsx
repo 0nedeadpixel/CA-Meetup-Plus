@@ -241,7 +241,34 @@ export const Dashboard: React.FC<DashboardProps> = ({
       const reader = new FileReader();
       reader.onload = (e) => {
         const text = e.target?.result as string;
-        verifyAndAddCodes(text, 'file');
+        
+        let processedText = text;
+        if (file.name.toLowerCase().endsWith('.csv')) {
+            const lines = text.split(/\r?\n/);
+            const codesFromCsv: string[] = [];
+            
+            for (let i = 0; i < lines.length; i++) {
+                const line = lines[i].trim();
+                if (!line) continue;
+                
+                // Skip header row if it looks like our export format
+                if (i === 0 && line.toLowerCase().startsWith('code,')) {
+                    continue;
+                }
+                
+                // Extract only the first column
+                const firstColumn = line.split(',')[0].trim().replace(/['"]/g, '');
+                if (firstColumn) {
+                    codesFromCsv.push(firstColumn);
+                }
+            }
+            processedText = codesFromCsv.join('\n');
+        }
+        
+        // Clear input to allow uploading same file twice
+        if (fileInputRef.current) fileInputRef.current.value = '';
+        
+        verifyAndAddCodes(processedText, 'file');
       };
       reader.readAsText(file);
     }
