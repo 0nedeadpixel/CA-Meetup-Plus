@@ -29,25 +29,34 @@ export const DataRecoveryModal: React.FC<DataRecoveryModalProps> = ({ isOpen, on
         reader.onload = (event) => {
             try {
                 const csvText = event.target?.result as string;
-                const lines = csvText.split('\n').filter(line => line.trim() !== '');
+                const lines = csvText.split(/\r?\n/).filter(line => line.trim() !== '');
+                if (lines.length === 0) return;
                 
                 // Skip header row if it exists
                 const startIndex = lines[0].toLowerCase().includes('code') ? 1 : 0;
                 
                 const parsedCodes: { code: string, ign: string, date: string, source: string }[] = [];
+                
+                // Regex to split by comma but ignore commas inside quotes
+                const csvSplitRegex = /,(?=(?:(?:[^"]*"){2})*[^"]*$)/;
 
                 for (let i = startIndex; i < lines.length; i++) {
-                    const parts = lines[i].split(',');
+                    const parts = lines[i].split(csvSplitRegex);
                     if (parts.length >= 1) {
-                        const code = parts[0].trim();
-                        if (code) {
-                            parsedCodes.push({
-                                code: code,
-                                ign: parts[1]?.trim() || 'Unknown',
-                                date: parts[2]?.replace(/['"]/g, '')?.trim() || new Date().toISOString(),
-                                source: parts[3]?.trim() || 'direct_scan'
-                            });
-                        }
+                        const code = (parts[0] || '').replace(/^"|"$/g, '').trim();
+                        
+                        if (!code || code.length < 5) continue;
+
+                        const ign = (parts[1] || '').replace(/^"|"$/g, '').trim() || 'Unknown';
+                        const date = (parts[2] || '').replace(/['"]/g, '').trim() || new Date().toISOString();
+                        const source = (parts[3] || '').replace(/^"|"$/g, '').trim() || 'direct_scan';
+
+                        parsedCodes.push({
+                            code,
+                            ign,
+                            date,
+                            source
+                        });
                     }
                 }
 
