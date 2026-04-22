@@ -1,5 +1,6 @@
 {
-  "name": "Remix: Remix: 2.415 CA Tool Pro (trivia)",
+  "name": "2.415 CA Tool Pro (cameetup.net)",
   "description": "A mobile-first, gesture-based tool for distributing Pokémon GO promo codes efficiently.",
-  "requestFramePermissions": []
+  "requestFramePermissions": [],
+  "majorCapabilities": []
 }
