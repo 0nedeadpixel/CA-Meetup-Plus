@@ -49,6 +49,7 @@ import {
   getDoc,
   setDoc,
   updateDoc,
+  deleteDoc,
   serverTimestamp,
   collection,
   query,
@@ -115,6 +116,7 @@ export const Hub: React.FC<HubProps> = ({
   const [toastMessage, setToastMessage] = useState("");
   const [pendingRequestsCount, setPendingRequestsCount] = useState(0);
   const [isSyncing, setIsSyncing] = useState(false);
+  const [showRestoreConfirm, setShowRestoreConfirm] = useState(false);
 
   const handleBackupToCloud = async () => {
     if (!discordUser) return;
@@ -136,16 +138,22 @@ export const Hub: React.FC<HubProps> = ({
 
   const handleRestoreFromCloud = async () => {
     if (!discordUser) return;
+    setShowRestoreConfirm(false);
     setIsSyncing(true);
     try {
-      const snap = await getDoc(doc(db, "discord_sync", discordUser.id));
+      const docRef = doc(db, "discord_sync", discordUser.id);
+      const snap = await getDoc(docRef);
       if (snap.exists()) {
         const data = snap.data();
         if (data.settings) onUpdateSettings(data.settings);
         if (data.codes && typeof onUpdateCodes === "function") {
           onUpdateCodes(data.codes);
         }
-        addToast("Successfully restored from cloud!", "success");
+        
+        // Burn: delete the backup after a successful restore
+        await deleteDoc(docRef);
+        
+        addToast("Successfully restored and wiped from cloud!", "success");
       } else {
         addToast("No cloud backup found.", "warning");
       }
@@ -450,6 +458,15 @@ export const Hub: React.FC<HubProps> = ({
   if (isSettingsMode) {
     return (
       <div className="flex flex-col h-full bg-gray-950 text-white">
+        <ConfirmationModal 
+            isOpen={showRestoreConfirm} 
+            onClose={() => setShowRestoreConfirm(false)} 
+            onConfirm={handleRestoreFromCloud} 
+            title="Restore & Burn?" 
+            message="This will overwrite your current device data with your cloud backup. Once restored, the cloud backup WILL BE DELETED to preserve security. Are you sure you want to proceed?" 
+            confirmText="Yes, Restore & Burn" 
+            isDanger={true} 
+        />
         <div className="p-4 border-b border-gray-800 flex items-center gap-4 bg-gray-900 sticky top-0 z-30">
           <button
             onClick={() => setIsSettingsMode(false)}
@@ -679,7 +696,7 @@ export const Hub: React.FC<HubProps> = ({
                     <Button
                       fullWidth
                       variant="secondary"
-                      onClick={handleRestoreFromCloud}
+                      onClick={() => setShowRestoreConfirm(true)}
                       disabled={isSyncing}
                       className="bg-gray-800 text-xs py-2 h-auto text-gray-300"
                     >
