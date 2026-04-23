@@ -1,0 +1,22 @@
+{
+  "short_name": "CA Meetup+",
+  "name": "CA Meetup Plus",
+  "icons": [
+    {
+      "src": "/images/meetupplus-icon.png",
+      "sizes": "1024x1024",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/images/meetupplus-icon.png",
+      "sizes": "1024x1024",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ],
+  "start_url": ".",
+  "display": "standalone",
+  "theme_color": "#0B0F19",
+  "background_color": "#0B0F19"
+}
