@@ -5,7 +5,7 @@ const ASSETS_TO_CACHE = [
   '/index.html',
   '/manifest.json',
   '/index.css',
-  '/images/meetupplus-icon.png',
+  '/images/cameetup-icon.png',
   '/images/meetupplus.png',
   '/images/logo.png',
   '/images/happy-pika.gif',
