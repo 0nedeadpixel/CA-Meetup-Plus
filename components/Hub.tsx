@@ -117,6 +117,26 @@ export const Hub: React.FC<HubProps> = ({
   const [pendingRequestsCount, setPendingRequestsCount] = useState(0);
   const [isSyncing, setIsSyncing] = useState(false);
   const [showRestoreConfirm, setShowRestoreConfirm] = useState(false);
+  const [showShredConfirm, setShowShredConfirm] = useState(false);
+  const [hasCloudBackup, setHasCloudBackup] = useState<boolean | null>(null);
+
+  useEffect(() => {
+    const checkBackupStatus = async () => {
+      if (!discordUser) {
+        setHasCloudBackup(false);
+        return;
+      }
+      try {
+        const docRef = doc(db, "discord_sync", discordUser.id);
+        const snap = await getDoc(docRef);
+        setHasCloudBackup(snap.exists());
+      } catch (e) {
+        console.error("Error checking cloud backup", e);
+        setHasCloudBackup(false);
+      }
+    };
+    checkBackupStatus();
+  }, [discordUser]);
 
   const handleBackupToCloud = async () => {
     if (!discordUser) return;
@@ -127,6 +147,7 @@ export const Hub: React.FC<HubProps> = ({
         codes: codes,
         updatedAt: serverTimestamp(),
       });
+      setHasCloudBackup(true);
       addToast("Successfully backed up to cloud!", "success");
     } catch (e: any) {
       console.error("Failed to backup:", e);
@@ -151,15 +172,37 @@ export const Hub: React.FC<HubProps> = ({
         }
         
         // Burn: delete the backup after a successful restore
-        await deleteDoc(docRef);
-        
-        addToast("Successfully restored and wiped from cloud!", "success");
+        try {
+          await deleteDoc(docRef);
+          setHasCloudBackup(false);
+          addToast("Successfully restored and wiped from cloud!", "success");
+        } catch (burnError: any) {
+          console.error("Failed to wipe cloud backup:", burnError);
+          addToast("Restored locally, but cloud wipe failed. Please use the Shredder button to clear it manually.", "warning");
+        }
       } else {
+        setHasCloudBackup(false);
         addToast("No cloud backup found.", "warning");
       }
     } catch (e: any) {
       console.error("Failed to restore:", e);
       addToast("Failed to restore: " + e.message, "error");
+    } finally {
+      setIsSyncing(false);
+    }
+  };
+
+  const handleDeleteFromCloud = async () => {
+    if (!discordUser) return;
+    setShowShredConfirm(false);
+    setIsSyncing(true);
+    try {
+      await deleteDoc(doc(db, "discord_sync", discordUser.id));
+      setHasCloudBackup(false);
+      addToast("Cloud backup permanently wiped.", "success");
+    } catch (e: any) {
+      console.error("Failed to delete backup:", e);
+      addToast("Failed to wipe cloud backup: " + e.message, "error");
     } finally {
       setIsSyncing(false);
     }
@@ -467,6 +510,15 @@ export const Hub: React.FC<HubProps> = ({
             confirmText="Yes, Restore & Burn" 
             isDanger={true} 
         />
+        <ConfirmationModal 
+            isOpen={showShredConfirm} 
+            onClose={() => setShowShredConfirm(false)} 
+            onConfirm={handleDeleteFromCloud} 
+            title="Shred Cloud Backup?" 
+            message="This will permanently delete your stored settings and codes from the cloud. Your local data will remain. Are you sure you want to proceed?" 
+            confirmText="Yes, Shred Backup" 
+            isDanger={true} 
+        />
         <div className="p-4 border-b border-gray-800 flex items-center gap-4 bg-gray-900 sticky top-0 z-30">
           <button
             onClick={() => setIsSettingsMode(false)}
@@ -697,15 +749,26 @@ export const Hub: React.FC<HubProps> = ({
                       fullWidth
                       variant="secondary"
                       onClick={() => setShowRestoreConfirm(true)}
-                      disabled={isSyncing}
-                      className="bg-gray-800 text-xs py-2 h-auto text-gray-300"
+                      disabled={isSyncing || hasCloudBackup === false}
+                      className={`text-xs py-2 h-auto ${hasCloudBackup === false ? 'bg-gray-900 text-gray-600 border-gray-800' : 'bg-gray-800 text-gray-300'} transition-opacity ${hasCloudBackup === false ? 'opacity-50' : ''}`}
                     >
                       {isSyncing ? (
                         <Loader2 size={14} className="mr-1 animate-spin" />
+                      ) : hasCloudBackup === false ? (
+                        <CloudOff size={14} className="mr-1" />
                       ) : (
                         <Download size={14} className="mr-1" />
                       )}{" "}
-                      Restore
+                      {hasCloudBackup === false ? "No Backup" : "Restore"}
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      onClick={() => setShowShredConfirm(true)}
+                      disabled={isSyncing || hasCloudBackup === false}
+                      className={`text-xs border ${hasCloudBackup === false ? 'bg-gray-950 text-gray-700 border-gray-900 pointer-events-none' : 'bg-gray-900/50 text-red-500 border-red-900/50 hover:bg-red-900/30 hover:text-red-400'}`}
+                      title="Permanently Delete Cloud Backup"
+                    >
+                        <Trash2 size={14} />
                     </Button>
                   </div>
                   <div className="mt-3 text-xs flex items-start gap-2 bg-gray-950 p-2 border border-gray-800">
