@@ -366,7 +366,7 @@ export const TriviaLobby: React.FC = () => {
                                     onChange={(e) => setName(e.target.value)} 
                                     className="w-full bg-gray-900 border border-gray-700 py-3 pl-10 pr-4 outline-none focus:border-blue-500 placeholder-gray-600 text-white font-bold" 
                                     placeholder="Enter Nickname" 
-                                    maxLength={12} 
+                                    maxLength={16} 
                                 />
                             </div>
                             <div className="flex items-start gap-3 p-3 bg-gray-900/50 border border-gray-800 cursor-pointer" onClick={() => setHasAgreed(!hasAgreed)}>

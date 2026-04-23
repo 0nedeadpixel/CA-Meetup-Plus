@@ -326,7 +326,8 @@ export const TriviaView: React.FC<TriviaViewProps> = ({ settings }) => {
                 authorUid: currentUser ? currentUser.uid : 'anon',
                 name: setupTitle || 'Shared Pack'
             });
-            addToast(`Pack Shared! Share Code: ${code}`, 'success');
+            await navigator.clipboard.writeText(code);
+            addToast(`Pack Shared & Code Copied: ${code}`, 'success');
         } catch (e) {
             addToast("Failed to share pack.", 'error');
         }

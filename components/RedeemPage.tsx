@@ -495,6 +495,7 @@ export const RedeemPage: React.FC = () => {
                                     onChange={(e) => setTempName(e.target.value)}
                                     placeholder="Username"
                                     className="w-full bg-gray-950 border border-gray-800 py-3 pl-10 pr-4 outline-none focus:border-purple-500 placeholder-gray-700 text-white"
+                                    maxLength={16}
                                 />
                             </div>
                         </div>
@@ -509,6 +510,7 @@ export const RedeemPage: React.FC = () => {
                                     onChange={(e) => setTempNickname(e.target.value)}
                                     placeholder="Nickname (Optional)"
                                     className="w-full bg-gray-950 border border-gray-800 py-3 pl-10 pr-4 outline-none focus:border-purple-500 placeholder-gray-700 text-white"
+                                    maxLength={16}
                                 />
                             </div>
                         </div>
