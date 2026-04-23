@@ -7,7 +7,8 @@ export interface CodeItem {
   dateAdded: number;
   claimedAt?: number; 
   claimedByIgn?: string; 
-  source?: 'raffle_win' | 'direct_scan';
+  claimedByDeviceId?: string;
+  source?: 'raffle_win' | 'direct_scan' | 'manual_assignment';
   isBadCode?: boolean;
 }
 

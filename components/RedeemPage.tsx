@@ -1,7 +1,7 @@
 
 import React, { useEffect, useState } from 'react';
 // @ts-ignore
-import { doc, setDoc, getDoc, serverTimestamp, increment, collection, query, where, limit, getDocs, runTransaction, addDoc, onSnapshot, updateDoc } from 'firebase/firestore';
+import { doc, setDoc, getDoc, serverTimestamp, increment, collection, query, where, limit, getDocs, runTransaction, addDoc, onSnapshot, updateDoc, orderBy } from 'firebase/firestore';
 // @ts-ignore
 import { logEvent } from 'firebase/analytics';
 import { db, analytics } from '../firebase';
@@ -195,7 +195,12 @@ export const RedeemPage: React.FC = () => {
                     await new Promise(resolve => setTimeout(resolve, Math.random() * (500 + attempt * 500)));
 
                     // 2. Fetch batch of codes
-                    const q = query(collection(db, `sessions/${sessionId}/codes`), where("claimed", "==", false), limit(20));
+                    const q = query(
+                        collection(db, `sessions/${sessionId}/codes`), 
+                        where("claimed", "==", false), 
+                        orderBy("dateAdded", "asc"),
+                        limit(20)
+                    );
                     const snapshot = await getDocs(q);
                     if (snapshot.empty) throw new Error("EMPTY_POOL");
 

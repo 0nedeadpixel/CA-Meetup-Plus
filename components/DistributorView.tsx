@@ -171,7 +171,8 @@ export const DistributorView: React.FC<DistributorProps> = ({ codes, onSessionCo
                     batch.set(ref, {
                         value: code.value,
                         claimed: false,
-                        originalId: code.id
+                        originalId: code.id,
+                        dateAdded: code.dateAdded
                     });
                 });
                 await batch.commit();
@@ -357,6 +358,7 @@ export const DistributorView: React.FC<DistributorProps> = ({ codes, onSessionCo
                         // Convert Firestore timestamp to millis
                         claimedAt: data.claimedAt ? (data.claimedAt.seconds * 1000) : Date.now(),
                         claimedByIgn: data.claimedByIgn, // Extract IGN for report
+                        claimedByDeviceId: data.claimedBy, // Ensure deviceId is passed
                         isBadCode: data.isBadCode || false
                     };
                 });

@@ -2,7 +2,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { CodeItem, AppSettings, SessionData, UserRole } from '../types';
 import { Button } from './Button';
-import { Play, Upload, Trash2, Settings, Download, Plus, Share2, ArrowLeft, Eye, Copy, VenetianMask, Search, Radio, ExternalLink, FlaskConical, Gauge, Image as ImageIcon, Flame, Users, AlertTriangle, BarChart3, TrendingUp, Lock, ShieldAlert, Database, X, RefreshCw, LayoutGrid, LogOut, List, Check, PenLine, Zap, QrCode } from 'lucide-react';
+import { Play, Upload, Trash2, Settings, Download, Plus, Share2, ArrowLeft, Eye, Copy, VenetianMask, Search, Radio, ExternalLink, FlaskConical, Gauge, Image as ImageIcon, Flame, Users, AlertTriangle, BarChart3, TrendingUp, Lock, ShieldAlert, Database, X, RefreshCw, LayoutGrid, LogOut, List, Check, PenLine, Zap, QrCode, User, CheckCircle } from 'lucide-react';
 // @ts-ignore
 import { doc, onSnapshot, getDocs, collection, deleteDoc, orderBy, query, limit, where, getDoc, collectionGroup } from 'firebase/firestore';
 // @ts-ignore
@@ -29,6 +29,7 @@ interface DashboardProps {
   onStart: () => void;
   settings: AppSettings;
   onUpdateSettings: (s: AppSettings) => void;
+  onManualClaim: (id: string, ign?: string) => void;
 }
 
 interface CommunityStats {
@@ -54,7 +55,8 @@ export const Dashboard: React.FC<DashboardProps> = ({
   onMarkBadCodes,
   onStart,
   settings,
-  onUpdateSettings
+  onUpdateSettings,
+  onManualClaim
 }) => {
   const navigate = useNavigate();
   const location = useLocation();
@@ -102,6 +104,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
 
   const [sessionToDelete, setSessionToDelete] = useState<string | null>(null);
   const [codeToDelete, setCodeToDelete] = useState<string | null>(null);
+  const [manualClaimTarget, setManualClaimTarget] = useState<{id: string, value: string} | null>(null);
 
   useEffect(() => {
       const sessionId = localStorage.getItem('pogo_last_active_session');
@@ -286,9 +289,9 @@ export const Dashboard: React.FC<DashboardProps> = ({
   };
 
   const exportUsed = () => {
-    const csv = "Code,Claimed At,Claimed By,Source,Status\n" + 
+    const csv = "Code,Claimed At,Claimed By,Device ID,Source,Status\n" + 
         usedCodes.map(c => 
-            `${c.value},${c.claimedAt ? new Date(c.claimedAt).toLocaleString() : 'Unknown'},${c.claimedByIgn || 'Anonymous'},${c.source || 'direct_scan'},${c.isBadCode ? 'Bad Code' : 'Valid'}`
+            `${c.value},${c.claimedAt ? new Date(c.claimedAt).toLocaleString() : 'Unknown'},${c.claimedByIgn || 'Anonymous'},${c.claimedByDeviceId || ''},${c.source || 'direct_scan'},${c.isBadCode ? 'Bad Code' : 'Valid'}`
         ).join('\n');
     
     const blob = new Blob([csv], { type: 'text/csv' });
@@ -434,6 +437,12 @@ export const Dashboard: React.FC<DashboardProps> = ({
           setEditingId(null);
           setEditValue('');
       }
+  };
+
+  const handleConfirmManualClaim = () => {
+      if (!manualClaimTarget) return;
+      onManualClaim(manualClaimTarget.id, "Manual Claim");
+      setManualClaimTarget(null);
   };
 
   const initiateDelete = (id: string) => {
@@ -695,6 +704,11 @@ export const Dashboard: React.FC<DashboardProps> = ({
                                 {code.claimedByIgn && (
                                     <div className="text-xs text-primary font-bold flex items-center gap-1 truncate"><Users size={10}/> {code.claimedByIgn}</div>
                                 )}
+                                {code.claimedByDeviceId && (
+                                    <div className="text-[10px] text-gray-600 font-mono mt-1 w-full truncate" title={code.claimedByDeviceId}>
+                                        Device: {code.claimedByDeviceId.slice(0,8)}...{code.claimedByDeviceId.slice(-4)}
+                                    </div>
+                                )}
                             </div>
                             <div className="flex gap-2">
                                 <button onClick={() => onToggleBadCode(code.id)} className={`p-3  transition-all border ${code.isBadCode ? 'bg-red-900/20 text-red-400 border-red-500/30 hover:bg-red-900/40' : 'bg-gray-950 text-gray-400 border-gray-800 hover:text-red-400 hover:border-red-400'}`} title={code.isBadCode ? 'Mark as Valid' : 'Mark as Bad Code'}><AlertTriangle size={16} /></button>
@@ -713,6 +727,27 @@ export const Dashboard: React.FC<DashboardProps> = ({
       return (
         <div className="flex flex-col h-full bg-gray-950 text-white">
             <ConfirmationModal isOpen={!!codeToDelete} onClose={() => setCodeToDelete(null)} onConfirm={confirmDeleteCode} title="Delete Code?" message="Are you sure you want to remove this code from the list?" confirmText="Yes, Delete" isDanger={true} />
+            
+            {manualClaimTarget && (
+                <div className="fixed inset-0 z-[60] bg-black/90 backdrop-blur-sm flex items-center justify-center p-4" onClick={() => setManualClaimTarget(null)}>
+                    <div className="bg-gray-900 border border-gray-800 w-full max-w-sm shadow-2xl overflow-hidden flex flex-col items-center p-6 text-center" onClick={e => e.stopPropagation()}>
+                        <h3 className="text-xl font-bold mb-2">Show this to Trainer</h3>
+                        <p className="text-sm text-gray-400 mb-6 w-full px-4">They will manually enter this into the Web Store.</p>
+                        
+                        <div className="bg-gray-950 border border-gray-700 p-6 w-full text-center shadow-inner mb-6">
+                            <div className="text-3xl md:text-4xl font-mono font-black tracking-widest text-primary break-all">
+                                {manualClaimTarget.value}
+                            </div>
+                        </div>
+
+                        <div className="flex gap-2 w-full">
+                            <Button variant="secondary" onClick={() => setManualClaimTarget(null)} fullWidth>Cancel</Button>
+                            <Button variant="primary" onClick={handleConfirmManualClaim} fullWidth>Redeemed</Button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
             <div className="p-4 border-b border-gray-800 flex items-center gap-4 bg-gray-900 sticky top-0 z-30"><button onClick={() => setViewState('HOME')} className="p-2 bg-gray-800 rounded-full text-gray-400 hover:text-white border border-gray-700"><ArrowLeft size={20}/></button><h2 className="text-xl font-bold">Unused Codes</h2></div>
             <div className="p-4 bg-gray-900 border-b border-gray-800">
                 <div className="flex items-center gap-2 bg-gray-950 p-3 border border-gray-800 mb-3"><Search size={18} className="text-gray-400"/><input type="text" placeholder="Search code..." className="bg-transparent outline-none w-full text-sm" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)}/></div>
@@ -731,6 +766,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
                                         {code.isReserved && <span className="bg-blue-900/40 text-blue-400 text-[8px] font-black uppercase px-1.5 py-0.5 border border-blue-500/30">Reserved</span>}
                                     </div>
                                     <div className="flex gap-1">
+                                        <button onClick={() => setManualClaimTarget({id: code.id, value: code.value})} className="p-2 text-gray-500 hover:text-green-400 hover:bg-gray-800" title="Assign Manually"><User size={16} /></button>
                                         <button onClick={() => {navigator.clipboard.writeText(code.value); addToast('Copied to clipboard!', 'success');}} className="p-2 text-gray-500 hover:text-primary hover:bg-gray-800" title="Copy"><Copy size={16} /></button>
                                         <button onClick={() => initiateEdit(code)} className="p-2 text-gray-500 hover:text-blue-400 hover:bg-gray-800" title="Edit"><PenLine size={16} /></button>
                                         <button onClick={() => initiateDelete(code.id)} className="p-2 text-gray-500 hover:text-red-400 hover:bg-gray-800" title="Delete"><Trash2 size={16} /></button>

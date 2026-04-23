@@ -1,4 +1,4 @@
-const CACHE_NAME = 'ca-meetup-plus-v1';
+const CACHE_NAME = 'ca-meetup-plus-v2';
 
 const ASSETS_TO_CACHE = [
   '/',
@@ -45,6 +45,31 @@ self.addEventListener('fetch', (event) => {
   
   // Don't intercept API endpoints or other protocols (skip firestore calls)
   if (!event.request.url.startsWith(self.location.origin)) return;
+
+  const url = new URL(event.request.url);
+  
+  // Bypass Vite dev server routes and dynamic imports
+  if (
+    url.pathname.startsWith('/@vite') ||
+    url.pathname.startsWith('/@react-refresh') ||
+    url.pathname.startsWith('/node_modules') ||
+    url.pathname.endsWith('.tsx') ||
+    url.pathname.endsWith('.ts') ||
+    url.searchParams.has('import') ||
+    url.searchParams.has('t')
+  ) {
+    return; // Let the browser handle these normally
+  }
+
+  // Only apply Stale-While-Revalidate to the assets we explicitly want to cache
+  const isCachableAsset = 
+    url.pathname === '/' || 
+    url.pathname === '/index.html' || 
+    url.pathname === '/index.css' || 
+    url.pathname === '/manifest.json' || 
+    url.pathname.startsWith('/images/');
+
+  if (!isCachableAsset) return;
 
   event.respondWith(
     caches.match(event.request).then((cachedResponse) => {

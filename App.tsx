@@ -93,6 +93,7 @@ const App: React.FC = () => {
             isUsed: true,
             claimedAt: dbData.claimedAt?.seconds ? dbData.claimedAt.seconds * 1000 : (dbData.claimedAt || Date.now()),
             claimedByIgn: dbData.claimedByIgn || existing.claimedByIgn,
+            claimedByDeviceId: dbData.claimedBy || existing.claimedByDeviceId,
             source: dbData.source || existing.source
           });
           changed = true;
@@ -113,6 +114,7 @@ const App: React.FC = () => {
             dateAdded: Date.now(),
             claimedAt: dbData ? (dbData.claimedAt?.seconds ? dbData.claimedAt.seconds * 1000 : (dbData.claimedAt || Date.now())) : undefined,
             claimedByIgn: dbData?.claimedByIgn,
+            claimedByDeviceId: dbData?.claimedBy,
             source: dbData?.source
           });
           changed = true;
@@ -134,7 +136,7 @@ const App: React.FC = () => {
       }));
   };
 
-  const handleSyncSession = (usedData: {id: string, claimedAt: number, claimedByIgn?: string, source?: 'raffle_win' | 'direct_scan', isBadCode?: boolean}[]) => {
+  const handleSyncSession = (usedData: {id: string, claimedAt: number, claimedByIgn?: string, claimedByDeviceId?: string, source?: 'raffle_win' | 'direct_scan' | 'manual_assignment', isBadCode?: boolean}[]) => {
     const usedMap = new Map(usedData.map(item => [item.id, item]));
     setCodes(prev => prev.map(c => {
         const match = usedMap.get(c.id);
@@ -145,6 +147,7 @@ const App: React.FC = () => {
                 isReserved: false, // Clear reservation on claim
                 claimedAt: match.claimedAt,
                 claimedByIgn: match.claimedByIgn,
+                claimedByDeviceId: match.claimedByDeviceId,
                 source: match.source || 'direct_scan',
                 isBadCode: match.isBadCode
             };
@@ -194,6 +197,21 @@ const App: React.FC = () => {
   const handleMarkBadCodes = (values: string[]) => {
     const valueSet = new Set(values);
     setCodes(prev => prev.map(c => valueSet.has(c.value) ? { ...c, isBadCode: true } : c));
+  };
+
+  const handleManualClaim = (codeId: string) => {
+    setCodes(prev => prev.map(c => {
+      if (c.id === codeId) {
+        return {
+          ...c,
+          isUsed: true,
+          claimedAt: Date.now(),
+          claimedByIgn: 'Manual Claim',
+          source: 'manual_assignment'
+        };
+      }
+      return c;
+    }));
   };
 
   const handleRecoverCodes = (recoveredCodes: { code: string, ign: string, date: string, source: string }[]) => {
@@ -273,6 +291,7 @@ const App: React.FC = () => {
                 onStart={() => navigate('/distributor/session')}
                 settings={settings}
                 onUpdateSettings={setSettings}
+                onManualClaim={handleManualClaim}
               />
           } />
           
