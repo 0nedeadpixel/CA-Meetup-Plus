@@ -505,7 +505,7 @@ export const TriviaLobby: React.FC = () => {
                                  <div className="flex items-center gap-4 bg-white/10 backdrop-blur-md px-8 py-4 rounded-full border border-white/20">
                                     <div className="text-left">
                                         <p className="text-xl text-white/80 uppercase tracking-wider font-bold text-xs">Play at</p>
-                                        <p className="text-2xl font-bold text-white">app.fullertonpogo.com</p>
+                                        <p className="text-2xl font-bold text-white">cameetup.net</p>
                                     </div>
                                  </div>
                             </div>

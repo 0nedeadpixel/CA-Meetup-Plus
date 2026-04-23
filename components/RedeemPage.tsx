@@ -323,7 +323,7 @@ export const RedeemPage: React.FC = () => {
           {status === 'success' && (
             <MotionDiv initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="w-full text-center">
                 <div className="flex justify-center mb-4">
-                    <img src="https://app.fullertonpogo.com/images/happy-pika.gif" className="w-32 h-32 object-contain drop-shadow-lg" alt="Happy Pika" />
+                    <img src="/images/happy-pika.gif" className="w-32 h-32 object-contain drop-shadow-lg" alt="Happy Pika" />
                 </div>
                 <h2 className="text-3xl font-black mb-1 uppercase tracking-tighter italic">Trainer Reward</h2>
                 <p className="text-gray-400 text-sm mb-6">Your exclusive promo code is ready!</p>
@@ -355,7 +355,7 @@ export const RedeemPage: React.FC = () => {
           {status === 'waiting_fix' && (
             <MotionDiv initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="w-full text-center py-4">
                 <div className="flex justify-center mb-4">
-                    <img src="https://app.fullertonpogo.com/images/pika-sad.gif" className="w-32 h-32 object-contain drop-shadow-lg opacity-90" alt="Waiting" />
+                    <img src="/images/pika-sad.gif" className="w-32 h-32 object-contain drop-shadow-lg opacity-90" alt="Waiting" />
                 </div>
                 <h2 className="text-2xl font-black uppercase italic text-orange-500 mb-2">Issue Reported</h2>
                 <p className="text-gray-400 text-sm mb-8 leading-relaxed px-2">Please stay on this screen. Your Ambassador is preparing a fresh code for you now.</p>
@@ -376,7 +376,7 @@ export const RedeemPage: React.FC = () => {
 
           {status === 'empty' && (
             <div className="flex flex-col items-center space-y-4 py-4">
-                <img src="https://app.fullertonpogo.com/images/pika-nomo.gif" className="w-32 h-32 object-contain drop-shadow-lg mb-4" alt="Empty" />
+                <img src="/images/pika-nomo.gif" className="w-32 h-32 object-contain drop-shadow-lg mb-4" alt="Empty" />
                 <h2 className="text-2xl font-black uppercase italic">Stash is empty!</h2>
                 <p className="text-gray-400 text-sm">All codes for this session have been claimed.</p>
                 <Button variant="secondary" className="mt-4" onClick={() => window.location.reload()}>Check Again</Button>
@@ -403,7 +403,7 @@ export const RedeemPage: React.FC = () => {
 
           {status === 'limit_reached' && (
             <div className="flex flex-col items-center space-y-4 py-4 px-2">
-                <img src="https://app.fullertonpogo.com/images/pika-nomo.gif" className="w-32 h-32 object-contain drop-shadow-lg mb-4" alt="Limit Reached" />
+                <img src="/images/pika-nomo.gif" className="w-32 h-32 object-contain drop-shadow-lg mb-4" alt="Limit Reached" />
                 <h2 className="text-2xl font-black uppercase italic text-red-500">Already Claimed!</h2>
                 <p className="text-gray-400 text-sm leading-relaxed">You've already claimed a code from this event. Only one per trainer!</p>
                 <div className="mt-4 p-3 bg-gray-800/50 border border-gray-700 w-full">
@@ -415,7 +415,7 @@ export const RedeemPage: React.FC = () => {
 
           {status === 'error' && (
             <div className="flex flex-col items-center space-y-4 py-4 px-2">
-                <img src="https://app.fullertonpogo.com/images/pika-sad.gif" className="w-32 h-32 object-contain drop-shadow-lg mb-4 opacity-80" alt="Error" />
+                <img src="/images/pika-sad.gif" className="w-32 h-32 object-contain drop-shadow-lg mb-4 opacity-80" alt="Error" />
                 <h2 className="text-2xl font-black uppercase italic text-orange-500">Sync Error</h2>
                 <p className="text-gray-400 text-sm">Connection trouble. Please retry.</p>
                 <Button variant="secondary" className="mt-4" onClick={() => window.location.reload()}>Retry</Button>

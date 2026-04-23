@@ -30,7 +30,7 @@ export const Footer: React.FC = () => {
             <PrivacyModal isOpen={isPrivacyOpen} onClose={() => setIsPrivacyOpen(false)} />
             <div className="p-5 border-t border-white/5 flex items-center justify-between bg-black/40 backdrop-blur-xl sticky bottom-0 z-30 shrink-0 w-full">
                 <a href={footerLink} target="_blank" rel="noopener noreferrer" className="flex items-center gap-3 group">
-                    <img src="https://app.fullertonpogo.com/images/logo.png" alt="Logo" className="w-8 h-8 object-contain shrink-0 opacity-60 group-hover:opacity-100 transition-opacity grayscale group-hover:grayscale-0" onError={(e) => { e.currentTarget.style.display = 'none'; }} />
+                    <img src="/images/logo.png" alt="Logo" className="w-8 h-8 object-contain shrink-0 opacity-60 group-hover:opacity-100 transition-opacity grayscale group-hover:grayscale-0" onError={(e) => { e.currentTarget.style.display = 'none'; }} />
                     <div className="flex flex-col text-left">
                         <p className="text-[10px] text-gray-500 leading-tight group-hover:text-gray-400 transition-colors">
                             Made with ❤️ by <span className="font-bold">{footerText}</span>
