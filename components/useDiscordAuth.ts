@@ -45,7 +45,7 @@ export function useDiscordAuth() {
 
   const login = async () => {
     try {
-      // 1. OPEN BLANK WINDOW IMMEDIATELY (Synchronously bypasses pop-up blockers)
+      setIsLoading(true); // Updates the UI instantly so they know it's working
       const authWindow = window.open('', 'oauth_popup', 'width=600,height=700');
       
       const redirectUri = `${window.location.origin}/auth/callback`;
@@ -54,20 +54,45 @@ export function useDiscordAuth() {
       
       if (url) {
         if (authWindow) {
-          // 2. If pop-up worked, send it to Discord
           authWindow.location.href = url;
+
+          // Polling fallback to catch successful login automatically
+          const pollTimer = setInterval(async () => {
+            try {
+              const res = await fetch('/api/auth/me');
+              if (res.ok) {
+                const data = await res.json();
+                if (data.user) {
+                  clearInterval(pollTimer);
+                  setUser(data.user);
+                  authWindow.close(); // Auto-close popup if backend didn't do it
+                  setIsLoading(false);
+                  return;
+                }
+              }
+              
+              // Stop polling if user closed the window manually before finishing
+              if (authWindow.closed) {
+                clearInterval(pollTimer);
+                fetchUser(); // Do one final check, just in case
+              }
+            } catch (e) {
+              // Ignore network errors during polling
+            }
+          }, 1500);
+
         } else {
-          // 3. FULL PAGE REDIRECT FALLBACK
-          // If a strict mobile browser completely blocks pop-ups, just redirect the main tab
+          // Fallback for strict mobile browsers
           window.location.href = url;
         }
-      } else if (authWindow) {
-        // Close the blank window if the API failed to return a URL
-        authWindow.close();
+      } else {
+        if (authWindow) authWindow.close();
+        setIsLoading(false);
       }
     } catch (error) {
       console.error('Failed to get Discord Auth URL', error);
       alert('Could not start Discord login. Please check configuration.');
+      setIsLoading(false);
     }
   };
 
