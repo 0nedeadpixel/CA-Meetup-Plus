@@ -5,12 +5,12 @@ const ASSETS_TO_CACHE = [
   '/index.html',
   '/manifest.json',
   '/index.css',
-  '/images/cameetup-icon.png',
-  '/images/meetupplus.png',
-  '/images/logo.png',
-  '/images/happy-pika.gif',
-  '/images/pika-sad.gif',
-  '/images/pika-nomo.gif'
+  '/img/cameetup-icon.png',
+  '/img/meetupplus.png',
+  '/img/logo.png',
+  '/img/happy-pika.gif',
+  '/img/pika-sad.gif',
+  '/img/pika-nomo.gif'
 ];
 
 self.addEventListener('install', (event) => {
@@ -67,7 +67,7 @@ self.addEventListener('fetch', (event) => {
     url.pathname === '/index.html' || 
     url.pathname === '/index.css' || 
     url.pathname === '/manifest.json' || 
-    url.pathname.startsWith('/images/');
+    url.pathname.startsWith('/img/');
 
   if (!isCachableAsset) return;
 

@@ -900,7 +900,7 @@ export const Hub: React.FC<HubProps> = ({
         <div className="flex items-center gap-4">
           <div className="relative shrink-0 w-12 h-12 flex items-center justify-center">
             <img
-              src="/images/meetupplus.png"
+              src="/img/meetupplus.png"
               alt="CA Logo"
               className="w-full h-full object-contain"
             />
