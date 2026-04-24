@@ -22,14 +22,45 @@ export const AmbassadorDirectoryModal: React.FC<AmbassadorDirectoryModalProps> =
     const fetchUsers = async () => {
       setLoading(true);
       try {
-        const querySnapshot = await getDocs(collection(db, "users"));
-        const userList: any[] = [];
-        querySnapshot.forEach((doc) => {
-          userList.push({ id: doc.id, ...doc.data() });
-        });
+        // 1. Fetch Guest/Discord directory
+        const dirSnapshot = await getDocs(collection(db, "ambassador_directory"));
+        // 2. Fetch Admin users directory
+        const usersSnapshot = await getDocs(collection(db, "users"));
         
-        // Filter users who have linked their Discord
-        const discordUsers = userList.filter((u) => u.discordId);
+        const combinedMap = new Map();
+
+        // Add everyone from the admin users collection who has a Discord ID
+        usersSnapshot.forEach((doc) => {
+          const data = doc.data();
+          if (data.discordId) {
+            combinedMap.set(data.discordId, { id: doc.id, ...data });
+          }
+        });
+
+        // Add/Merge everyone from the ambassador_directory
+        dirSnapshot.forEach((doc) => {
+          const data = doc.data();
+          if (combinedMap.has(data.discordId)) {
+            // Merge with existing admin data
+            const existing = combinedMap.get(data.discordId);
+            combinedMap.set(data.discordId, { 
+              ...existing, 
+              ...data, 
+              profile: existing.profile || { communityName: data.communityName } 
+            });
+          } else {
+            // Add new guest user
+            combinedMap.set(data.discordId, { 
+              id: doc.id, 
+              ...data,
+              role: 'user',
+              email: 'Guest Auth',
+              profile: { communityName: data.communityName }
+            });
+          }
+        });
+
+        const discordUsers = Array.from(combinedMap.values());
         
         // Sort: Super Admins first, then Admins, then standard users
         discordUsers.sort((a, b) => {
