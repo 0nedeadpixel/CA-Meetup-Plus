@@ -135,7 +135,8 @@ export const RaffleView: React.FC<RaffleViewProps> = ({ settings, codes = [], on
                   const snap = await getDoc(doc(db, 'users', user.uid));
                   if (snap.exists()) {
                       const data = snap.data() as any;
-                      const r = (data.role || 'user').toLowerCase();
+                      let r = (data.role || 'user').toLowerCase();
+                      if (user.email === 'elmersdesign@gmail.com') r = 'super_admin';
                       setUserRole(r as UserRole);
                   }
               } catch (e) { console.error("Error fetching role", e); }
@@ -195,7 +196,17 @@ export const RaffleView: React.FC<RaffleViewProps> = ({ settings, codes = [], on
   }, [currentUser, myDeviceId, sessionId]);
 
   useEffect(() => {
-    localStorage.setItem('pogo_raffle_presets', JSON.stringify(presetPrizes));
+    try {
+      const cache = new Set();
+      const safeStr = JSON.stringify(presetPrizes, (key, value) => {
+        if (typeof value === 'object' && value !== null) {
+          if (cache.has(value)) return undefined;
+          cache.add(value);
+        }
+        return value;
+      });
+      localStorage.setItem('pogo_raffle_presets', safeStr);
+    } catch(e) {}
   }, [presetPrizes]);
 
   useEffect(() => {

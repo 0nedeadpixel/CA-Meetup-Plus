@@ -145,7 +145,17 @@ export const ScavengerHuntLobby: React.FC = () => {
           if (hunt.gameMode === 'free_roam') {
               const next = [...completedIds, target.id];
               setCompletedIds(next);
-              localStorage.setItem(`pogo_scavenger_${huntId}_completed`, JSON.stringify(next));
+              try {
+                  const cache = new Set();
+                  const safeStr = JSON.stringify(next, (key, value) => {
+                    if (typeof value === 'object' && value !== null) {
+                      if (cache.has(value)) return undefined;
+                      cache.add(value);
+                    }
+                    return value;
+                  });
+                  localStorage.setItem(`pogo_scavenger_${huntId}_completed`, safeStr);
+              } catch(e) {}
               count = next.length;
               setManualTargetId(null);
           } else {

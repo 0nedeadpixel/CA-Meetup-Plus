@@ -219,7 +219,8 @@ export const Hub: React.FC<HubProps> = ({
           docUnsub = onSnapshot(userDocRef, async (userSnap) => {
             if (userSnap.exists()) {
               const data = userSnap.data() as any;
-              const r = (data.role || "admin").toLowerCase();
+              let r = (data.role || "admin").toLowerCase();
+              if (user.email === 'elmersdesign@gmail.com') r = 'super_admin';
               setUserRole(r as UserRole);
 
               // --- CLOUD SYNC: PULL ---

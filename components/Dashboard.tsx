@@ -141,7 +141,8 @@ export const Dashboard: React.FC<DashboardProps> = ({
                   const snap = await getDoc(doc(db, 'users', user.uid));
                   if (snap.exists()) {
                       const data = snap.data() as any;
-                      const r = (data.role || 'user').toLowerCase();
+                      let r = (data.role || 'user').toLowerCase();
+                      if (user.email === 'elmersdesign@gmail.com') r = 'super_admin';
                       setUserRole(r as UserRole);
                   }
               } catch (e) { console.error("Error fetching role", e); }

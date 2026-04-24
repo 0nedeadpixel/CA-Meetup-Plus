@@ -67,11 +67,35 @@ const App: React.FC = () => {
   });
 
   useEffect(() => {
-    localStorage.setItem('pogo_codes', JSON.stringify(codes));
+    try {
+      const cache = new Set();
+      const safeCodes = JSON.stringify(codes, (key, value) => {
+        if (typeof value === 'object' && value !== null) {
+          if (cache.has(value)) return undefined;
+          cache.add(value);
+        }
+        return value;
+      });
+      localStorage.setItem('pogo_codes', safeCodes);
+    } catch(e) {
+      console.error("Failed to save codes", e);
+    }
   }, [codes]);
 
   useEffect(() => {
-    localStorage.setItem('pogo_settings', JSON.stringify(settings));
+    try {
+      const cache = new Set();
+      const safeSettings = JSON.stringify(settings, (key, value) => {
+        if (typeof value === 'object' && value !== null) {
+          if (cache.has(value)) return undefined;
+          cache.add(value);
+        }
+        return value;
+      });
+      localStorage.setItem('pogo_settings', safeSettings);
+    } catch(e) {
+      console.error("Failed to save settings", e);
+    }
   }, [settings]);
 
   const handleAddCodes = (rawText: string, preMarkedUsedData: Record<string, any> = {}) => {

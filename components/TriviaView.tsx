@@ -137,7 +137,8 @@ export const TriviaView: React.FC<TriviaViewProps> = ({ settings }) => {
                 try {
                     const snap = await getDoc(doc(db, 'users', user.uid));
                     if (snap.exists()) {
-                        const r = (snap.data().role || 'user').toLowerCase();
+                        let r = (snap.data().role || 'user').toLowerCase();
+                        if (user.email === 'elmersdesign@gmail.com') r = 'super_admin';
                         setUserRole(r as UserRole);
                     }
                 } catch(e) { console.error("Error fetching role", e); }
