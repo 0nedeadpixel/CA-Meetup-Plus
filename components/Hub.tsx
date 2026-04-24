@@ -61,6 +61,7 @@ import { PrivacyModal } from "./PrivacyModal";
 import { ConfirmationModal } from "./ConfirmationModal";
 import { DataRecoveryModal } from "./DataRecoveryModal";
 import { GlobalSettingsModal } from "./GlobalSettingsModal";
+import { AmbassadorDirectoryModal } from "./AmbassadorDirectoryModal";
 import { useToast } from "./ToastContext";
 import { useDiscordAuth } from "./useDiscordAuth";
 
@@ -91,6 +92,7 @@ export const Hub: React.FC<HubProps> = ({
   const [isPrivacyOpen, setIsPrivacyOpen] = useState(false);
   const [isDataRecoveryOpen, setIsDataRecoveryOpen] = useState(false);
   const [isGlobalSettingsOpen, setIsGlobalSettingsOpen] = useState(false);
+  const [isDirectoryOpen, setIsDirectoryOpen] = useState(false);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const logoInputRef = useRef<HTMLInputElement>(null);
 
@@ -863,6 +865,10 @@ export const Hub: React.FC<HubProps> = ({
         isOpen={isGlobalSettingsOpen}
         onClose={() => setIsGlobalSettingsOpen(false)}
       />
+      <AmbassadorDirectoryModal
+        isOpen={isDirectoryOpen}
+        onClose={() => setIsDirectoryOpen(false)}
+      />
 
       {/* Top Navigation */}
       <div className="p-4 flex items-center justify-between border-b border-gray-900 bg-gray-950 relative z-30">
@@ -965,6 +971,19 @@ export const Hub: React.FC<HubProps> = ({
                 <DatabaseBackup size={18} className="text-blue-400" />
                 Data Recovery
               </button>
+
+              {isSuperAdmin && (
+                <button
+                  onClick={() => {
+                    setIsMenuOpen(false);
+                    setIsDirectoryOpen(true);
+                  }}
+                  className="flex items-center gap-3 w-full p-3 hover:bg-gray-800 text-left transition-colors text-sm font-bold text-gray-300 hover:text-white"
+                >
+                  <Users size={18} className="text-yellow-400" />
+                  Ambassador Directory
+                </button>
+              )}
 
               {isSuperAdmin && (
                 <button
