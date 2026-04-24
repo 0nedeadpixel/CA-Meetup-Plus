@@ -301,6 +301,31 @@ export const Hub: React.FC<HubProps> = ({
     }
   }, [currentUser, discordUser]);
 
+  // AUTOMATIC GUEST REGISTRATION: Save EVERY Discord user to a master directory
+  useEffect(() => {
+    if (discordUser) {
+      const registerGuest = async () => {
+        try {
+          await setDoc(
+            doc(db, "ambassador_directory", discordUser.id),
+            {
+              discordId: discordUser.id,
+              discordUsername: discordUser.username,
+              discordAvatar: discordUser.avatar,
+              discordInServer: discordUser.inServer,
+              lastSeen: serverTimestamp(),
+              communityName: settings.ambassador.communityName || "Unknown"
+            },
+            { merge: true }
+          );
+        } catch (err) {
+          console.error("Failed to register user to directory", err);
+        }
+      };
+      registerGuest();
+    }
+  }, [discordUser, settings.ambassador.communityName]);
+
   const communityName = settings.ambassador.communityName || "My Community";
   const needsSetup = !settings.ambassador.communityName;
 
