@@ -45,19 +45,25 @@ export function useDiscordAuth() {
 
   const login = async () => {
     try {
+      // 1. OPEN BLANK WINDOW IMMEDIATELY (Synchronously bypasses pop-up blockers)
+      const authWindow = window.open('', 'oauth_popup', 'width=600,height=700');
+      
       const redirectUri = `${window.location.origin}/auth/callback`;
       const response = await fetch(`/api/auth/url?redirectUri=${encodeURIComponent(redirectUri)}`);
       const { url } = await response.json();
       
       if (url) {
-        const authWindow = window.open(
-          url,
-          'oauth_popup',
-          'width=600,height=700'
-        );
-        if (!authWindow) {
-          alert("Please allow popups for this site to connect your Discord account.");
+        if (authWindow) {
+          // 2. If pop-up worked, send it to Discord
+          authWindow.location.href = url;
+        } else {
+          // 3. FULL PAGE REDIRECT FALLBACK
+          // If a strict mobile browser completely blocks pop-ups, just redirect the main tab
+          window.location.href = url;
         }
+      } else if (authWindow) {
+        // Close the blank window if the API failed to return a URL
+        authWindow.close();
       }
     } catch (error) {
       console.error('Failed to get Discord Auth URL', error);
