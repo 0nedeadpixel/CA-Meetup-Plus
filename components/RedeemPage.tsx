@@ -481,8 +481,8 @@ export const RedeemPage: React.FC = () => {
                       <div className="w-16 h-16 bg-purple-900/20 rounded-full flex items-center justify-center mx-auto mb-4 border border-purple-500/50">
                           <User size={32} className="text-purple-400" />
                       </div>
-                      <h3 className="text-xl font-bold text-white mb-2">Trainer Registration</h3>
-                      <p className="text-sm text-gray-400 mb-6">Please enter your Trainer Name. This helps the Ambassador verify your claim and assist you if you have any trouble with your code.</p>
+                      <h3 className="text-xl font-bold text-white mb-2">Trainer Check-In</h3>
+                      <p className="text-sm text-gray-400 mb-6">Almost there! Just drop your Trainer Name so we know who's claiming this reward. This helps us assist you if there are any issues with the code.</p>
                       
                       <div className="space-y-3 mb-6">
                         <div>
@@ -517,7 +517,7 @@ export const RedeemPage: React.FC = () => {
                       </div>
                       
                       <Button fullWidth onClick={handleSaveName} disabled={!tempName.trim()} className="bg-purple-600 hover:bg-purple-500 border-none">
-                          Save & Claim Code
+                          Get My Code!
                       </Button>
                   </div>
               </MotionDiv>
