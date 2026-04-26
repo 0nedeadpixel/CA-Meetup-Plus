@@ -6,15 +6,17 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { doc, onSnapshot, setDoc } from 'firebase/firestore';
 import { db } from '../firebase';
 import { Button } from './Button';
-import { Loader2, MapIcon, Gamepad2, User, ShieldCheck, Shield, Copy } from 'lucide-react';
+import { Loader2, MapIcon, Gamepad2, User, ShieldCheck, Shield, Copy, Trophy, Home } from 'lucide-react';
 import { ScavengerHunt, ScavengerParticipant } from '../types';
 import { v4 as uuidv4 } from 'uuid';
 import { QRCodeSVG } from 'qrcode.react';
 import { Footer } from './Footer';
+import { useToast } from './ToastContext';
 
 export const ScavengerHuntLobby: React.FC = () => {
   const { huntId } = useParams();
   const navigate = useNavigate();
+  const { addToast } = useToast();
   const [loading, setLoading] = useState(true);
   const [hunt, setHunt] = useState<ScavengerHunt | null>(null);
   const [error, setError] = useState('');
@@ -69,7 +71,10 @@ export const ScavengerHuntLobby: React.FC = () => {
       setRegistering(true);
       try {
           const pid = getDeviceId();
-          const pool = [...(hunt.pokemonPool || [])];
+          let pool = [...(hunt.pokemonPool || [])];
+          
+          // Randomly shuffle and take up to 5
+          pool = pool.sort(() => 0.5 - Math.random()).slice(0, 5);
           
           const newParticipant: ScavengerParticipant = {
               id: pid, 
@@ -91,14 +96,35 @@ export const ScavengerHuntLobby: React.FC = () => {
   };
 
   const handleSearchStringCopy = () => {
-      if (!participant) return;
-      navigator.clipboard.writeText(participant.assignedPokemon.join(','));
+      if (!participant || !participant.assignedPokemon || participant.assignedPokemon.length === 0) return;
+      const searchString = `age0 & ${participant.assignedPokemon.join(',')}`;
+      navigator.clipboard.writeText(searchString);
+      addToast("Search string copied to clipboard!", "success");
+  };
+
+  const handleGoCommunity = () => {
+      navigate('/community', { state: { profile: hunt?.ambassador } });
   };
 
   if (loading) return <div className="h-[100dvh] bg-gray-950 flex items-center justify-center text-white"><Loader2 className="animate-spin text-green-500"/></div>;
   if (error) return <div className="h-[100dvh] bg-gray-950 flex flex-col items-center justify-center p-6 text-center text-white"><Shield className="text-red-500 mb-4" size={48}/><p className="text-gray-400 text-sm mb-6">{error}</p><Button onClick={() => window.location.reload()}>Retry</Button></div>;
 
   if (!hunt) return null;
+
+  if (isRegistered && participant?.isVerified) {
+      return (
+        <div className="h-[100dvh] bg-gray-950 flex flex-col items-center justify-center p-6 text-center text-white">
+            <div className="w-24 h-24 bg-green-500 rounded-full flex items-center justify-center mb-6 shadow-2xl animate-bounce">
+                <Trophy size={48} className="text-black fill-current" />
+            </div>
+            <h1 className="text-4xl font-black mb-2 uppercase italic text-green-500">Mission Complete!</h1>
+            <p className="text-gray-300 mb-8">You conquered <strong>{hunt.title}</strong>!</p>
+            <Button variant="secondary" onClick={handleGoCommunity} className="flex items-center gap-2">
+                <Home size={18}/> Return to Community
+            </Button>
+        </div>
+      )
+  }
 
   if (!isRegistered || !participant) {
       return (
