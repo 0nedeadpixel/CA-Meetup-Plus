@@ -6,7 +6,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { doc, onSnapshot, setDoc } from 'firebase/firestore';
 import { db } from '../firebase';
 import { Button } from './Button';
-import { Loader2, MapIcon, Gamepad2, User, ShieldCheck, Shield, Copy, Trophy, Home } from 'lucide-react';
+import { Loader2, Map as MapIcon, Gamepad2, User, ShieldCheck, Shield, Copy, Trophy, Home } from 'lucide-react';
 import { ScavengerHunt, ScavengerParticipant } from '../types';
 import { v4 as uuidv4 } from 'uuid';
 import { QRCodeSVG } from 'qrcode.react';
