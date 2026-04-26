@@ -152,6 +152,7 @@ export interface ScavengerHunt {
   gameMode?: 'sequential' | 'free_roam';
   pokemonPool: string[];
   ambassador?: AmbassadorSettings;
+  hostUid?: string;
 }
 
 export interface TriviaQuestion {

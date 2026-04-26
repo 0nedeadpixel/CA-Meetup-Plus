@@ -27,6 +27,13 @@ export const ScavengerHuntView: React.FC<ScavengerHuntViewProps> = ({ settings }
   const navigate = useNavigate();
   const { addToast } = useToast();
   
+  const [currentUser, setCurrentUser] = useState(auth.currentUser);
+
+  useEffect(() => {
+      const unsub = onAuthStateChanged(auth, (user: any) => setCurrentUser(user));
+      return () => unsub();
+  }, []);
+
   // Builder State
   const [viewState, setViewState] = useState<'LIST' | 'EDIT_HUNT' | 'MONITOR'>('LIST');
   const [hunts, setHunts] = useState<ScavengerHunt[]>([]);
@@ -56,13 +63,15 @@ export const ScavengerHuntView: React.FC<ScavengerHuntViewProps> = ({ settings }
 
   // 1. Fetch Hunts
   useEffect(() => {
+      if (!currentUser) return;
       const q = query(collection(db, 'scavenger_hunts'), orderBy('createdAt', 'desc'));
       const unsub = onSnapshot(q, (snap: any) => {
-          const list = snap.docs.map((d: any) => ({ ...d.data() } as ScavengerHunt));
+          const list = snap.docs.map((d: any) => ({ ...d.data() } as ScavengerHunt))
+              .filter((hunt: ScavengerHunt) => !hunt.hostUid || hunt.hostUid === currentUser.uid);
           setHunts(list);
       });
       return () => unsub();
-  }, []);
+  }, [currentUser]);
 
   // 2. Fetch Participants (If Monitoring)
   useEffect(() => {
@@ -81,7 +90,7 @@ export const ScavengerHuntView: React.FC<ScavengerHuntViewProps> = ({ settings }
   useEffect(() => {
       const hash = window.location.hash;
       const hashParts = hash.split('?');
-      if (hashParts.length > 1) {
+      if (hashParts.length > 1 && currentUser) {
           const hashParams = new URLSearchParams(hashParts[1]);
           const hId = hashParams.get('hunt');
           const vId = hashParams.get('verify');
@@ -89,6 +98,23 @@ export const ScavengerHuntView: React.FC<ScavengerHuntViewProps> = ({ settings }
           if (hId && vId) {
               const checkVerification = async () => {
                   try {
+                      const huntSnap = await getDoc(doc(db, `scavenger_hunts/${hId}`));
+                      if (!huntSnap.exists()) {
+                          addToast("Hunt not found.", 'error');
+                          return;
+                      }
+                      
+                      const huntData = huntSnap.data() as ScavengerHunt;
+                      
+                      // SECURITY CHECK: Does this belong to the logged-in Ambassador?
+                      if (huntData.hostUid && huntData.hostUid !== currentUser.uid) {
+                          addToast("Unauthorized: This hunt belongs to another Ambassador.", 'error');
+                          const currentUrl = window.location.href;
+                          const [baseUrl] = currentUrl.split('?');
+                          window.history.replaceState({}, document.title, baseUrl);
+                          return;
+                      }
+
                       const docRef = doc(db, `scavenger_hunts/${hId}/participants`, vId);
                       const snap = await getDoc(docRef);
                       if (snap.exists()) {
@@ -104,7 +130,7 @@ export const ScavengerHuntView: React.FC<ScavengerHuntViewProps> = ({ settings }
               checkVerification();
           }
       }
-  }, [addToast]);
+  }, [currentUser, addToast]);
 
   // --- ACTIONS ---
 
@@ -140,7 +166,8 @@ export const ScavengerHuntView: React.FC<ScavengerHuntViewProps> = ({ settings }
           createdAt: Date.now(),
           gameMode: 'sequential',
           pokemonPool: [],
-          ambassador: settings.ambassador
+          ambassador: settings.ambassador,
+          hostUid: currentUser?.uid || ''
       };
       setCurrentHunt(newHunt);
       // Reset Form
