@@ -68,8 +68,9 @@ const App: React.FC = () => {
 
   useEffect(() => {
     try {
-      const cache = new Set();
+      const cache = new WeakSet();
       const safeCodes = JSON.stringify(codes, (key, value) => {
+        if (value instanceof Element || (typeof Event !== 'undefined' && value instanceof Event) || (value && value.$$typeof)) return undefined; // Drop DOM/React/Event nodes
         if (typeof value === 'object' && value !== null) {
           if (cache.has(value)) return undefined;
           cache.add(value);
@@ -84,8 +85,9 @@ const App: React.FC = () => {
 
   useEffect(() => {
     try {
-      const cache = new Set();
+      const cache = new WeakSet();
       const safeSettings = JSON.stringify(settings, (key, value) => {
+        if (value instanceof Element || (typeof Event !== 'undefined' && value instanceof Event) || (value && value.$$typeof)) return undefined;
         if (typeof value === 'object' && value !== null) {
           if (cache.has(value)) return undefined;
           cache.add(value);

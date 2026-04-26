@@ -197,8 +197,9 @@ export const RaffleView: React.FC<RaffleViewProps> = ({ settings, codes = [], on
 
   useEffect(() => {
     try {
-      const cache = new Set();
+      const cache = new WeakSet();
       const safeStr = JSON.stringify(presetPrizes, (key, value) => {
+        if (value instanceof Element || (typeof Event !== 'undefined' && value instanceof Event) || (value && value.$$typeof)) return undefined;
         if (typeof value === 'object' && value !== null) {
           if (cache.has(value)) return undefined;
           cache.add(value);
