@@ -340,7 +340,7 @@ const App: React.FC = () => {
           <Route path="/raffle/join/:sessionId" element={<RaffleJoinPage />} />
           
           <Route path="/scavenger" element={<ScavengerHuntView settings={settings} />} />
-          <Route path="/play/:huntId" element={<ScavengerHuntLobby />} />
+          <Route path="/scavenger/play/:huntId" element={<ScavengerHuntLobby />} />
 
           <Route path="/trivia" element={<TriviaView settings={settings} />} />
           <Route path="/trivia/play/:sessionId" element={<TriviaLobby />} />
