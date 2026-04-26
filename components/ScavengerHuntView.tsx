@@ -1,6 +1,6 @@
 
 import React, { useEffect, useState } from 'react';
-import { ArrowLeft, Map, Plus, Trash2, Edit2, Save, X, Navigation, LocateFixed, Eye, EyeOff, Lock, ChevronRight, GripVertical, QrCode, Share2, Copy, AlertTriangle, Users, Shuffle, ListOrdered, Search, User, Link as LinkIcon, Check, Play } from 'lucide-react';
+import { ArrowLeft, Map, Plus, Trash2, Edit2, Save, X, Navigation, LocateFixed, Eye, EyeOff, Lock, ChevronRight, GripVertical, QrCode, Share2, Copy, AlertTriangle, Users, Shuffle, ListOrdered, Search, User, Link as LinkIcon, Check, Play, CheckCircle } from 'lucide-react';
 // @ts-ignore
 import { useNavigate } from 'react-router-dom';
 import { Button } from './Button';
@@ -9,7 +9,7 @@ import { auth, db } from '../firebase';
 import { onAuthStateChanged } from 'firebase/auth';
 // @ts-ignore
 import { doc, getDoc, collection, addDoc, updateDoc, deleteDoc, onSnapshot, serverTimestamp, query, orderBy, setDoc } from 'firebase/firestore';
-import { ScavengerHunt, Waypoint, ScavengerParticipant, AppSettings } from '../types';
+import { ScavengerHunt, ScavengerParticipant, AppSettings } from '../types';
 import { v4 as uuidv4 } from 'uuid';
 import { QRCodeSVG } from 'qrcode.react';
 import { ConfirmationModal } from './ConfirmationModal';
@@ -40,20 +40,19 @@ export const ScavengerHuntView: React.FC<ScavengerHuntViewProps> = ({ settings }
   const [huntDesc, setHuntDesc] = useState('');
   const [huntMode, setHuntMode] = useState<'sequential' | 'free_roam'>('sequential');
   
-  // Waypoint Editing
-  const [editingWaypoint, setEditingWaypoint] = useState<Waypoint | null>(null);
-  const [showWpModal, setShowWpModal] = useState(false);
-  const [wpName, setWpName] = useState('');
-  const [wpClue, setWpClue] = useState('');
-  const [wpLat, setWpLat] = useState<number>(0);
-  const [wpLng, setWpLng] = useState<number>(0);
-  const [wpRadius, setWpRadius] = useState<number>(30);
+  // Pokemon Pool
+  const [pokemonPoolText, setPokemonPoolText] = useState('');
 
   // UI State
   const [linkCopied, setLinkCopied] = useState(false);
   const [showQrModal, setShowQrModal] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [itemToDelete, setItemToDelete] = useState<string | null>(null);
+
+  // Verification
+  const [verificationParticipant, setVerificationParticipant] = useState<ScavengerParticipant | null>(null);
+  const [verificationHuntId, setVerificationHuntId] = useState<string | null>(null);
+  const [verifying, setVerifying] = useState(false);
 
   // 1. Fetch Hunts
   useEffect(() => {
@@ -70,15 +69,66 @@ export const ScavengerHuntView: React.FC<ScavengerHuntViewProps> = ({ settings }
       if (viewState === 'MONITOR' && currentHunt) {
           const unsub = onSnapshot(collection(db, `scavenger_hunts/${currentHunt.id}/participants`), (snap: any) => {
               const list = snap.docs.map((d: any) => ({ ...d.data() } as ScavengerParticipant));
-              // Sort by completed count descending
-              list.sort((a: any, b: any) => b.completedCount - a.completedCount);
+              // Sort by verified status
+              list.sort((a: ScavengerParticipant, b: ScavengerParticipant) => (a.isVerified === b.isVerified) ? 0 : a.isVerified ? -1 : 1);
               setParticipants(list);
           });
           return () => unsub();
       }
   }, [viewState, currentHunt]);
 
+  // 3. Check for Scanner URL ?hunt=X&verify=Y
+  useEffect(() => {
+      const hash = window.location.hash;
+      const hashParts = hash.split('?');
+      if (hashParts.length > 1) {
+          const hashParams = new URLSearchParams(hashParts[1]);
+          const hId = hashParams.get('hunt');
+          const vId = hashParams.get('verify');
+          
+          if (hId && vId) {
+              const checkVerification = async () => {
+                  try {
+                      const docRef = doc(db, `scavenger_hunts/${hId}/participants`, vId);
+                      const snap = await getDoc(docRef);
+                      if (snap.exists()) {
+                          setVerificationParticipant({ id: snap.id, ...snap.data() } as ScavengerParticipant);
+                          setVerificationHuntId(hId);
+                      } else {
+                         addToast("Participant not found.", 'error');
+                      }
+                  } catch (e) {
+                     addToast("Error fetching participant.", 'error');
+                  }
+              };
+              checkVerification();
+          }
+      }
+  }, [addToast]);
+
   // --- ACTIONS ---
+
+  const handleVerifyComplete = async () => {
+      if (!verificationParticipant || !verificationHuntId) return;
+      setVerifying(true);
+      try {
+          await updateDoc(doc(db, `scavenger_hunts/${verificationHuntId}/participants`, verificationParticipant.id), {
+              isVerified: true
+          });
+          addToast("Verified successfully!", 'success');
+          setVerificationParticipant(null);
+          setVerificationHuntId(null);
+          
+          // Clear URL params
+          const currentUrl = window.location.href;
+          const [baseUrl] = currentUrl.split('?');
+          window.history.replaceState({}, document.title, baseUrl);
+      } catch (e) {
+          addToast("Error verifying player", 'error');
+      } finally {
+          setVerifying(false);
+      }
+  };
 
   const handleCreateNew = () => {
       const newId = uuidv4();
@@ -89,7 +139,7 @@ export const ScavengerHuntView: React.FC<ScavengerHuntViewProps> = ({ settings }
           active: true,
           createdAt: Date.now(),
           gameMode: 'sequential',
-          waypoints: [],
+          pokemonPool: [],
           ambassador: settings.ambassador
       };
       setCurrentHunt(newHunt);
@@ -97,6 +147,7 @@ export const ScavengerHuntView: React.FC<ScavengerHuntViewProps> = ({ settings }
       setHuntTitle('');
       setHuntDesc('');
       setHuntMode('sequential');
+      setPokemonPoolText('');
       setViewState('EDIT_HUNT');
   };
 
@@ -105,6 +156,7 @@ export const ScavengerHuntView: React.FC<ScavengerHuntViewProps> = ({ settings }
       setHuntTitle(hunt.title);
       setHuntDesc(hunt.description);
       setHuntMode(hunt.gameMode || 'sequential');
+      setPokemonPoolText(hunt.pokemonPool?.join(', ') || '');
       setViewState('EDIT_HUNT');
   };
 
@@ -117,6 +169,7 @@ export const ScavengerHuntView: React.FC<ScavengerHuntViewProps> = ({ settings }
           title: huntTitle,
           description: huntDesc,
           gameMode: huntMode,
+          pokemonPool: pokemonPoolText.split(',').map(p => p.trim()).filter(p => p !== ''),
           ambassador: settings.ambassador // Update profile if changed
       };
 
@@ -140,75 +193,6 @@ export const ScavengerHuntView: React.FC<ScavengerHuntViewProps> = ({ settings }
       setViewState('MONITOR');
   };
 
-  // --- WAYPOINT ACTIONS ---
-
-  const handleAddWaypoint = () => {
-      setEditingWaypoint(null); // New mode
-      setWpName('');
-      setWpClue('');
-      setWpLat(0);
-      setWpLng(0);
-      setWpRadius(30);
-      
-      // Try to get current location
-      if (navigator.geolocation) {
-          navigator.geolocation.getCurrentPosition((pos) => {
-              setWpLat(pos.coords.latitude);
-              setWpLng(pos.coords.longitude);
-          });
-      }
-      setShowWpModal(true);
-  };
-
-  const handleEditWaypoint = (wp: Waypoint) => {
-      setEditingWaypoint(wp);
-      setWpName(wp.name);
-      setWpClue(wp.clue);
-      setWpLat(wp.latitude);
-      setWpLng(wp.longitude);
-      setWpRadius(wp.radius);
-      setShowWpModal(true);
-  };
-
-  const handleSaveWaypoint = () => {
-      if (!currentHunt || !wpName || !wpClue) return;
-      
-      const newWp: Waypoint = {
-          id: editingWaypoint ? editingWaypoint.id : uuidv4(),
-          name: wpName,
-          clue: wpClue,
-          latitude: wpLat,
-          longitude: wpLng,
-          radius: wpRadius,
-          order: editingWaypoint ? editingWaypoint.order : currentHunt.waypoints.length
-      };
-
-      let updatedWaypoints = [...currentHunt.waypoints];
-      if (editingWaypoint) {
-          updatedWaypoints = updatedWaypoints.map(w => w.id === editingWaypoint.id ? newWp : w);
-      } else {
-          updatedWaypoints.push(newWp);
-      }
-
-      setCurrentHunt({ ...currentHunt, waypoints: updatedWaypoints });
-      setShowWpModal(false);
-  };
-
-  const handleDeleteWaypoint = (id: string) => {
-      if (!currentHunt) return;
-      const updated = currentHunt.waypoints.filter(w => w.id !== id);
-      setCurrentHunt({ ...currentHunt, waypoints: updated });
-  };
-
-  const handleUseMyLocation = () => {
-      if (navigator.geolocation) {
-          navigator.geolocation.getCurrentPosition((pos) => {
-              setWpLat(pos.coords.latitude);
-              setWpLng(pos.coords.longitude);
-          }, (err) => addToast("Could not get location. Ensure GPS is on.", 'error'));
-      }
-  };
-
   const constructJoinUrl = () => {
       if (!currentHunt) return '';
       let baseUrl = window.location.origin + window.location.pathname;
@@ -225,12 +209,50 @@ export const ScavengerHuntView: React.FC<ScavengerHuntViewProps> = ({ settings }
   // --- RENDER LIST ---
   if (viewState === 'LIST') {
       return (
-        <div className="h-full w-full bg-gray-950 flex flex-col text-white">
+        <div className="h-full w-full bg-gray-950 flex flex-col text-white relative">
             <ConfirmationModal isOpen={showDeleteModal} onClose={() => setShowDeleteModal(false)} onConfirm={handleDeleteHunt} title="Delete Hunt?" message="This cannot be undone." confirmText="Delete" isDanger={true} />
             
+            {/* VERIFICATION MODAL for when loaded from URL params but in LIST view */}
+            <AnimatePresence>
+                {verificationParticipant && (
+                    <MotionDiv initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-50 bg-black/95 flex flex-col items-center justify-center p-6" onClick={() => setVerificationParticipant(null)}>
+                        <div className="bg-gray-900 border border-green-500/30 p-8 w-full max-w-sm text-center shadow-2xl" onClick={e => e.stopPropagation()}>
+                            <div className="w-16 h-16 bg-green-900/20 rounded-full flex items-center justify-center mx-auto mb-4 border border-green-500/50">
+                                <CheckCircle size={32} className="text-green-400" />
+                            </div>
+                            <h3 className="text-xl font-bold text-white mb-2">Verify Player</h3>
+                            <p className="text-sm text-gray-400 mb-4"><span className="font-bold text-white">{verificationParticipant.ign}</span> has completed the hunt!</p>
+                            
+                            <div className="bg-gray-950 border border-gray-800 p-4 rounded mb-6 text-left max-h-[200px] overflow-y-auto">
+                                <h4 className="text-xs uppercase text-gray-500 font-bold mb-2">Their Catch-List</h4>
+                                <ul className="list-disc pl-4 space-y-1">
+                                    {verificationParticipant.assignedPokemon?.map((poke, i) => (
+                                        <li key={i} className="text-sm text-green-400">{poke}</li>
+                                    ))}
+                                    {(!verificationParticipant.assignedPokemon || verificationParticipant.assignedPokemon.length === 0) && (
+                                        <li className="text-sm text-gray-500">None</li>
+                                    )}
+                                </ul>
+                            </div>
+                            
+                            <div className="flex gap-2">
+                                <Button variant="secondary" className="flex-1" onClick={() => setVerificationParticipant(null)}>Cancel</Button>
+                                <Button 
+                                    className="bg-green-600 hover:bg-green-500 border-none text-white font-bold h-10 flex-[2]" 
+                                    onClick={handleVerifyComplete}
+                                    disabled={verifying}
+                                >
+                                    {verifying ? 'Verifying...' : 'Mark as Verified'}
+                                </Button>
+                            </div>
+                        </div>
+                    </MotionDiv>
+                )}
+            </AnimatePresence>
+
             <div className="p-4 border-b border-gray-800 flex items-center gap-4 bg-gray-900 sticky top-0 z-30">
                 <button onClick={() => navigate('/')} className="p-2 bg-gray-800 rounded-full border border-gray-700 text-gray-400 hover:text-white"><ArrowLeft size={20}/></button>
-                <div><h2 className="text-xl font-bold text-green-400">Scavenger Hunts</h2><p className="text-xs text-gray-500">GPS Adventures</p></div>
+                <div><h2 className="text-xl font-bold text-green-400">Scavenger Hunts</h2><p className="text-xs text-gray-500">Catch-List Adventures</p></div>
             </div>
 
             <div className="flex-1 overflow-y-auto p-4 space-y-4">
@@ -244,7 +266,7 @@ export const ScavengerHuntView: React.FC<ScavengerHuntViewProps> = ({ settings }
                             <div>
                                 <h3 className="text-lg font-bold text-white">{hunt.title || 'Untitled Hunt'}</h3>
                                 <div className="text-xs text-gray-500 flex items-center gap-2">
-                                    <Map size={12}/> {hunt.waypoints.length} Stops • {hunt.gameMode === 'free_roam' ? 'Free Roam' : 'Sequential'}
+                                    <Map size={12}/> {hunt.pokemonPool?.length || 0} Pokémon listed
                                 </div>
                             </div>
                             <div className="flex gap-2">
@@ -264,7 +286,45 @@ export const ScavengerHuntView: React.FC<ScavengerHuntViewProps> = ({ settings }
   // --- RENDER MONITOR ---
   if (viewState === 'MONITOR' && currentHunt) {
       return (
-        <div className="h-full w-full bg-gray-950 flex flex-col text-white">
+        <div className="h-full w-full bg-gray-950 flex flex-col text-white relative">
+            {/* VERIFICATION MODAL */}
+            <AnimatePresence>
+                {verificationParticipant && (
+                    <MotionDiv initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-50 bg-black/95 flex flex-col items-center justify-center p-6" onClick={() => setVerificationParticipant(null)}>
+                        <div className="bg-gray-900 border border-green-500/30 p-8 w-full max-w-sm text-center shadow-2xl" onClick={e => e.stopPropagation()}>
+                            <div className="w-16 h-16 bg-green-900/20 rounded-full flex items-center justify-center mx-auto mb-4 border border-green-500/50">
+                                <CheckCircle size={32} className="text-green-400" />
+                            </div>
+                            <h3 className="text-xl font-bold text-white mb-2">Verify Player</h3>
+                            <p className="text-sm text-gray-400 mb-4"><span className="font-bold text-white">{verificationParticipant.ign}</span> has completed the hunt!</p>
+                            
+                            <div className="bg-gray-950 border border-gray-800 p-4 rounded mb-6 text-left max-h-[200px] overflow-y-auto">
+                                <h4 className="text-xs uppercase text-gray-500 font-bold mb-2">Their Catch-List</h4>
+                                <ul className="list-disc pl-4 space-y-1">
+                                    {verificationParticipant.assignedPokemon?.map((poke, i) => (
+                                        <li key={i} className="text-sm text-green-400">{poke}</li>
+                                    ))}
+                                    {(!verificationParticipant.assignedPokemon || verificationParticipant.assignedPokemon.length === 0) && (
+                                        <li className="text-sm text-gray-500">None</li>
+                                    )}
+                                </ul>
+                            </div>
+                            
+                            <div className="flex gap-2">
+                                <Button variant="secondary" className="flex-1" onClick={() => setVerificationParticipant(null)}>Cancel</Button>
+                                <Button 
+                                    className="bg-green-600 hover:bg-green-500 border-none text-white font-bold h-10 flex-[2]" 
+                                    onClick={handleVerifyComplete}
+                                    disabled={verifying}
+                                >
+                                    {verifying ? 'Verifying...' : 'Mark as Verified'}
+                                </Button>
+                            </div>
+                        </div>
+                    </MotionDiv>
+                )}
+            </AnimatePresence>
+
             <AnimatePresence>
                 {showQrModal && (
                     <MotionDiv initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-50 bg-black/95 flex flex-col items-center justify-center p-6" onClick={() => setShowQrModal(false)}>
@@ -285,23 +345,28 @@ export const ScavengerHuntView: React.FC<ScavengerHuntViewProps> = ({ settings }
             <div className="flex-1 overflow-y-auto p-4">
                 <div className="flex justify-between items-center mb-4 text-xs font-bold text-gray-500 uppercase">
                     <span>Players ({participants.length})</span>
-                    <span>Progress</span>
+                    <span>Status</span>
                 </div>
                 <div className="space-y-2">
                     {participants.map((p, index) => {
-                        const progress = Math.min(100, Math.round((p.completedCount / currentHunt.waypoints.length) * 100));
                         return (
                             <div key={p.id || index} className="bg-gray-900 border border-gray-800 p-3 flex items-center gap-3">
                                 <div className="w-8 h-8 rounded-full bg-gray-800 flex items-center justify-center text-gray-400"><User size={14}/></div>
                                 <div className="flex-1">
                                     <div className="flex justify-between mb-1">
                                         <span className="font-bold text-white">{p.ign}</span>
-                                        <span className="text-xs text-green-400">{p.completedCount}/{currentHunt.waypoints.length}</span>
+                                        <span className={`text-xs ${p.isVerified ? 'text-green-400' : 'text-gray-400'}`}>{p.isVerified ? 'Verified' : 'Pending'}</span>
                                     </div>
-                                    <div className="h-1.5 bg-gray-800 rounded-full overflow-hidden">
-                                        <div className="h-full bg-green-500 transition-all duration-500" style={{ width: `${progress}%` }}></div>
+                                    <div className="text-xs text-gray-500 truncate max-w-[200px]">
+                                        {p.assignedPokemon?.join(', ') || 'None'}
                                     </div>
                                 </div>
+                                {!p.isVerified && (
+                                   <Button variant="secondary" onClick={() => {
+                                       setVerificationParticipant(p);
+                                       setVerificationHuntId(currentHunt.id);
+                                   }} className="h-8 px-3 text-xs bg-green-600/20 text-green-400 border-none hover:bg-green-600/40">Verify</Button>
+                                )}
                             </div>
                         )
                     })}
@@ -315,31 +380,6 @@ export const ScavengerHuntView: React.FC<ScavengerHuntViewProps> = ({ settings }
   // --- RENDER EDITOR ---
   return (
     <div className="h-full w-full bg-gray-950 flex flex-col text-white relative">
-        {/* WAYPOINT MODAL */}
-        <AnimatePresence>
-            {showWpModal && (
-                <MotionDiv initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-4">
-                    <div className="bg-gray-900 border border-gray-700 w-full max-w-md p-6 max-h-[90vh] overflow-y-auto">
-                        <h3 className="text-lg font-bold mb-4">{editingWaypoint ? 'Edit Checkpoint' : 'New Checkpoint'}</h3>
-                        <div className="space-y-4">
-                            <div><label className="text-xs text-gray-500 uppercase">Name</label><input className="w-full bg-gray-950 border border-gray-800 p-3" value={wpName} onChange={e => setWpName(e.target.value)} placeholder="e.g. Fountain"/></div>
-                            <div><label className="text-xs text-gray-500 uppercase">Clue/Task</label><textarea className="w-full bg-gray-950 border border-gray-800 p-3" value={wpClue} onChange={e => setWpClue(e.target.value)} placeholder="Solve this riddle..."/></div>
-                            <div className="flex gap-2">
-                                <div className="flex-1"><label className="text-xs text-gray-500 uppercase">Lat</label><input type="number" className="w-full bg-gray-950 border border-gray-800 p-3" value={wpLat} onChange={e => setWpLat(parseFloat(e.target.value))}/></div>
-                                <div className="flex-1"><label className="text-xs text-gray-500 uppercase">Lng</label><input type="number" className="w-full bg-gray-950 border border-gray-800 p-3" value={wpLng} onChange={e => setWpLng(parseFloat(e.target.value))}/></div>
-                            </div>
-                            <Button variant="secondary" onClick={handleUseMyLocation} className="text-xs h-8"><LocateFixed size={14}/> Use My GPS Location</Button>
-                            <div><label className="text-xs text-gray-500 uppercase">Radius (meters)</label><input type="range" min="10" max="100" value={wpRadius} onChange={e => setWpRadius(parseInt(e.target.value))} className="w-full"/><div className="text-right text-xs text-gray-400">{wpRadius}m</div></div>
-                            <div className="flex gap-2 mt-4">
-                                <Button variant="secondary" fullWidth onClick={() => setShowWpModal(false)}>Cancel</Button>
-                                <Button variant="primary" fullWidth onClick={handleSaveWaypoint}>Save</Button>
-                            </div>
-                        </div>
-                    </div>
-                </MotionDiv>
-            )}
-        </AnimatePresence>
-
         <div className="p-4 border-b border-gray-800 flex items-center justify-between bg-gray-900 sticky top-0 z-30">
             <div className="flex items-center gap-4">
                 <button onClick={() => setViewState('LIST')} className="p-2 bg-gray-800 rounded-full border border-gray-700 text-gray-400 hover:text-white"><ArrowLeft size={20}/></button>
@@ -352,46 +392,25 @@ export const ScavengerHuntView: React.FC<ScavengerHuntViewProps> = ({ settings }
             <div className="space-y-4">
                 <div><label className="text-xs text-gray-500 uppercase font-bold">Title</label><input className="w-full bg-gray-900 border border-gray-800 p-3 focus:border-green-500 outline-none" value={huntTitle} onChange={e => setHuntTitle(e.target.value)} placeholder="Hunt Title"/></div>
                 <div><label className="text-xs text-gray-500 uppercase font-bold">Description</label><textarea className="w-full bg-gray-900 border border-gray-800 p-3 focus:border-green-500 outline-none" value={huntDesc} onChange={e => setHuntDesc(e.target.value)} placeholder="Instructions..."/></div>
-                
-                <div className="bg-gray-900 p-4 border border-gray-800">
-                    <label className="text-xs text-gray-500 uppercase font-bold mb-3 block">Game Mode</label>
-                    <div className="flex gap-2">
-                        <button onClick={() => setHuntMode('sequential')} className={`flex-1 p-3  border text-sm font-bold transition-all ${huntMode === 'sequential' ? 'bg-green-600 border-green-500 text-white' : 'bg-gray-950 border-gray-800 text-gray-400'}`}>
-                            <ListOrdered size={20} className="mx-auto mb-1"/> Sequential
-                        </button>
-                        <button onClick={() => setHuntMode('free_roam')} className={`flex-1 p-3  border text-sm font-bold transition-all ${huntMode === 'free_roam' ? 'bg-blue-600 border-blue-500 text-white' : 'bg-gray-950 border-gray-800 text-gray-400'}`}>
-                            <Shuffle size={20} className="mx-auto mb-1"/> Free Roam
-                        </button>
-                    </div>
-                </div>
             </div>
 
             <div className="border-t border-gray-800 pt-6">
                 <div className="flex justify-between items-center mb-4">
-                    <h3 className="font-bold text-gray-400 uppercase text-xs">Waypoints ({currentHunt?.waypoints.length || 0})</h3>
-                    <Button variant="secondary" onClick={handleAddWaypoint} className="h-8 text-xs"><Plus size={14}/> Add Stop</Button>
+                    <h3 className="font-bold text-gray-400 uppercase text-xs">Pokémon Pool</h3>
                 </div>
                 
                 <div className="space-y-2">
-                    {currentHunt?.waypoints.map((wp, i) => (
-                        <div key={wp.id || i} className="bg-gray-900 border border-gray-800 p-3 flex justify-between items-center group">
-                            <div className="flex items-center gap-3">
-                                <div className="w-6 h-6 rounded-full bg-gray-800 flex items-center justify-center text-xs font-bold text-gray-500 border border-gray-700">{i+1}</div>
-                                <div>
-                                    <div className="font-bold text-sm text-white">{wp.name}</div>
-                                    <div className="text-xs text-gray-500 truncate max-w-[150px]">{wp.clue}</div>
-                                </div>
-                            </div>
-                            <div className="flex gap-2">
-                                <button onClick={() => handleEditWaypoint(wp)} className="p-2 text-gray-500 hover:text-white"><Edit2 size={16}/></button>
-                                <button onClick={() => handleDeleteWaypoint(wp.id)} className="p-2 text-gray-500 hover:text-red-400"><Trash2 size={16}/></button>
-                            </div>
-                        </div>
-                    ))}
-                    {(!currentHunt?.waypoints || currentHunt.waypoints.length === 0) && <div className="text-center text-gray-600 text-sm py-4">No checkpoints added yet.</div>}
+                    <p className="text-xs text-gray-500 mb-2">Paste a comma-separated list of Pokémon for players to find.</p>
+                    <textarea 
+                        className="w-full bg-gray-900 border border-gray-800 p-3 focus:border-green-500 outline-none min-h-[150px] text-sm" 
+                        value={pokemonPoolText} 
+                        onChange={e => setPokemonPoolText(e.target.value)} 
+                        placeholder="Pikachu, Bulbasaur, Charmander, Squirtle..."
+                    />
                 </div>
             </div>
         </div>
     </div>
   );
 };
+

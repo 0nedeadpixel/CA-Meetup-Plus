@@ -133,25 +133,14 @@ export interface RaffleParticipant {
   optedOutPrizeIds?: string[];
 }
 
-export interface Waypoint {
-  id: string;
-  name: string;
-  clue: string;
-  latitude: number;
-  longitude: number;
-  radius: number;
-  secretCode?: string;
-  order: number;
-}
-
 export interface ScavengerParticipant {
     id: string;
     deviceId: string;
     name: string;
     ign: string;
     joinedAt: number;
-    completedCount: number;
-    lastCheckpointTime?: number;
+    assignedPokemon: string[];
+    isVerified: boolean;
 }
 
 export interface ScavengerHunt {
@@ -161,7 +150,7 @@ export interface ScavengerHunt {
   active: boolean;
   createdAt: number;
   gameMode?: 'sequential' | 'free_roam';
-  waypoints: Waypoint[];
+  pokemonPool: string[];
   ambassador?: AmbassadorSettings;
 }
 
