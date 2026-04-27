@@ -112,6 +112,7 @@ export const Hub: React.FC<HubProps> = ({
   const [passwordInput, setPasswordInput] = useState("");
   const [authLoading, setAuthLoading] = useState(false);
   const [secretTaps, setSecretTaps] = useState(0);
+  const [discordRole, setDiscordRole] = useState<'guest' | 'host'>('guest');
 
   // TOAST STATE
   const [showToast, setShowToast] = useState(false);
@@ -301,6 +302,21 @@ export const Hub: React.FC<HubProps> = ({
     }
   }, [currentUser, discordUser]);
 
+  // REAL-TIME HOST VERIFICATION: Listen for role upgrades from the Super Admin
+  useEffect(() => {
+    if (discordUser) {
+      const unsub = onSnapshot(doc(db, "ambassador_directory", discordUser.id), (docSnap) => {
+        if (docSnap.exists()) {
+          const data = docSnap.data();
+          setDiscordRole(data.role === 'host' ? 'host' : 'guest');
+        }
+      });
+      return () => unsub();
+    } else {
+      setDiscordRole('guest');
+    }
+  }, [discordUser]);
+
   // AUTOMATIC GUEST REGISTRATION: Save EVERY Discord user to a master directory
   useEffect(() => {
     if (discordUser) {
@@ -374,16 +390,16 @@ export const Hub: React.FC<HubProps> = ({
       icon: (
         <Map
           size={32}
-          className={isSuperAdmin ? "text-green-400" : "text-gray-600"}
+          className={(isSuperAdmin || discordRole === 'host') ? "text-green-400" : "text-gray-600"}
         />
       ),
       path: "/scavenger",
-      color: isSuperAdmin
+      color: (isSuperAdmin || discordRole === 'host')
         ? "border-green-500/50 hover:border-green-500 cursor-pointer"
         : "border-gray-800 opacity-50 cursor-not-allowed",
-      shadowColor: isSuperAdmin ? "shadow-green-500/20" : "shadow-none",
-      active: isSuperAdmin,
-      locked: !isSuperAdmin,
+      shadowColor: (isSuperAdmin || discordRole === 'host') ? "shadow-green-500/20" : "shadow-none",
+      active: isSuperAdmin || discordRole === 'host',
+      locked: !(isSuperAdmin || discordRole === 'host'),
       badge: "ALPHA",
     },
   ];

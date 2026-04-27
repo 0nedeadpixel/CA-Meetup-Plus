@@ -14,7 +14,7 @@ export interface CodeItem {
 
 export type ViewState = 'DASHBOARD' | 'DISTRIBUTE';
 
-export type UserRole = 'super_admin' | 'admin' | 'user';
+export type UserRole = 'super_admin' | 'admin' | 'host' | 'user';
 
 export interface UserProfile {
     uid: string;
