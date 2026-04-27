@@ -52,7 +52,7 @@ export const AmbassadorDirectoryModal: React.FC<AmbassadorDirectoryModalProps> =
           combinedMap.set(data.discordId, { 
             id: document.id, 
             ...data,
-            role: 'user',
+            role: data.role || 'user',
             email: 'Guest Auth',
             profile: { communityName: data.communityName }
           });
@@ -113,7 +113,7 @@ export const AmbassadorDirectoryModal: React.FC<AmbassadorDirectoryModalProps> =
         initial={{ opacity: 0, scale: 0.95, y: 10 }}
         animate={{ opacity: 1, scale: 1, y: 0 }}
         exit={{ opacity: 0, scale: 0.95, y: 10 }}
-        className="relative bg-gray-900 border border-gray-800 shadow-2xl p-0 w-full max-w-4xl max-h-[85vh] flex flex-col rounded-xl overflow-hidden"
+        className="relative bg-gray-900 border border-gray-800 shadow-2xl p-0 w-full max-w-lg max-h-[85vh] flex flex-col rounded-xl overflow-hidden"
       >
         <div className="flex items-center justify-between p-6 border-b border-gray-800 bg-gray-950/50">
           <div className="flex items-center gap-3">
@@ -141,9 +141,9 @@ export const AmbassadorDirectoryModal: React.FC<AmbassadorDirectoryModalProps> =
           ) : users.length > 0 ? (
             <div className="grid gap-3">
               {users.map((user) => (
-                <div key={user.id} className="flex items-center justify-between p-4 bg-gray-800/50 border border-gray-700/50 rounded-xl hover:bg-gray-800 transition-colors">
-                  <div className="flex items-center gap-4">
-                    <div className="h-12 w-12 rounded-full bg-gray-700 border border-gray-600 flex-shrink-0 overflow-hidden">
+                <div key={user.id} className="flex items-center justify-between p-4 bg-gray-800/50 border border-gray-700/50 rounded-xl hover:bg-gray-800 transition-colors gap-2">
+                  <div className="flex items-center gap-3 overflow-hidden">
+                    <div className={`h-10 w-10 sm:h-12 sm:w-12 rounded-full bg-gray-700 flex-shrink-0 overflow-hidden border-2 ${user.discordInServer ? 'border-green-500' : 'border-gray-600'}`}>
                       {user.discordAvatar ? (
                         <img 
                           src={`https://cdn.discordapp.com/avatars/${user.discordId}/${user.discordAvatar}.png`} 
@@ -157,52 +157,45 @@ export const AmbassadorDirectoryModal: React.FC<AmbassadorDirectoryModalProps> =
                       )}
                     </div>
                     
-                    <div>
+                    <div className="min-w-0 pr-2">
                       <div className="flex items-center gap-2">
-                        <span className="font-bold text-white">{user.discordUsername}</span>
-                        {user.role === 'super_admin' && (
-                          <span className="flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider bg-purple-500/20 text-purple-400 px-2 py-0.5 rounded-full border border-purple-500/30">
-                            <ShieldCheck size={10} /> Super Admin
-                          </span>
-                        )}
-                        {user.role === 'admin' && (
-                          <span className="flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider bg-blue-500/20 text-blue-400 px-2 py-0.5 rounded-full border border-blue-500/30">
-                            <Shield size={10} /> Admin
-                          </span>
-                        )}
-                        {user.role !== 'super_admin' && user.role !== 'admin' && (
-                          <button 
-                            onClick={() => toggleHostRole(user.discordId, user.role || 'user')}
-                            className={`px-3 py-1 text-[10px] font-bold rounded-full border ${user.role === 'host' ? 'bg-purple-900/30 text-purple-400 border-purple-500/50 hover:bg-purple-900/50' : 'bg-gray-800 text-gray-400 border-gray-700 hover:text-white'}`}
-                          >
-                            {user.role === 'host' ? 'Revoke Host' : 'Make Host'}
-                          </button>
-                        )}
+                        <span className="font-bold text-white truncate max-w-[120px] sm:max-w-[200px]">{user.discordUsername}</span>
                       </div>
-                      <div className="text-xs text-gray-400 flex flex-col sm:flex-row sm:items-center sm:gap-3 mt-1">
-                        <span>{user.email}</span>
+                      <div className="text-xs text-gray-400 flex flex-col sm:flex-row sm:items-center sm:gap-2 mt-1 truncate">
+                        {user.email !== 'Guest Auth' && (
+                          <span className="truncate">{user.email}</span>
+                        )}
                         {user.profile?.communityName && (
                           <>
-                            <span className="hidden sm:inline text-gray-600">•</span>
-                            <span className="text-gray-300 font-medium">{user.profile.communityName}</span>
+                            {user.email !== 'Guest Auth' && (
+                              <span className="hidden sm:inline text-gray-600 shrink-0">•</span>
+                            )}
+                            <span className="text-gray-300 font-medium truncate">{user.profile.communityName}</span>
                           </>
                         )}
                       </div>
                     </div>
                   </div>
 
-                  <div className="flex flex-col items-end gap-2 shrink-0">
-                    <div className={`flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1 rounded-md border ${
-                      user.discordInServer 
-                        ? 'bg-green-500/10 text-green-400 border-green-500/20' 
-                        : 'bg-red-500/10 text-red-400 border-red-500/20'
-                    }`}>
-                      {user.discordInServer ? (
-                        <><CheckCircle2 size={14} /> In Server</>
-                      ) : (
-                        <><XCircle size={14} /> Not In Server</>
-                      )}
-                    </div>
+                  <div className="flex items-center shrink-0">
+                    {user.role === 'super_admin' && (
+                      <span className="flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider bg-purple-500/20 text-purple-400 px-2 py-0.5 rounded-full border border-purple-500/30">
+                        <ShieldCheck size={10} /> <span className="hidden sm:inline">Super Admin</span><span className="sm:hidden">Admin</span>
+                      </span>
+                    )}
+                    {user.role === 'admin' && (
+                      <span className="flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider bg-blue-500/20 text-blue-400 px-2 py-0.5 rounded-full border border-blue-500/30">
+                        <Shield size={10} /> Admin
+                      </span>
+                    )}
+                    {user.role !== 'super_admin' && user.role !== 'admin' && (
+                      <button 
+                        onClick={() => toggleHostRole(user.discordId, user.role || 'user')}
+                        className={`px-3 py-1.5 text-[10px] font-bold rounded-full border whitespace-nowrap transition-colors ${user.role === 'host' ? 'bg-purple-900/30 text-purple-400 border-purple-500/50 hover:bg-purple-900/50' : 'bg-gray-800 text-gray-400 border-gray-700 hover:text-white'}`}
+                      >
+                        {user.role === 'host' ? 'Revoke Host' : 'Make Host'}
+                      </button>
+                    )}
                   </div>
                 </div>
               ))}
