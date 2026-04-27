@@ -1,6 +1,6 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { X, Users, Shield, ShieldCheck, CheckCircle2, XCircle } from "lucide-react";
-import { collection, getDocs } from "firebase/firestore";
+import { collection, getDocs, doc, setDoc } from "firebase/firestore";
 import { db } from "../firebase";
 import { motion, AnimatePresence } from "framer-motion";
 
@@ -18,73 +18,85 @@ export const AmbassadorDirectoryModal: React.FC<AmbassadorDirectoryModalProps> =
   const [users, setUsers] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
+  const fetchUsers = useCallback(async () => {
+    setLoading(true);
+    try {
+      // 1. Fetch Guest/Discord directory
+      const dirSnapshot = await getDocs(collection(db, "ambassador_directory"));
+      // 2. Fetch Admin users directory
+      const usersSnapshot = await getDocs(collection(db, "users"));
+      
+      const combinedMap = new Map();
+
+      // Add everyone from the admin users collection who has a Discord ID
+      usersSnapshot.forEach((document) => {
+        const data = document.data();
+        if (data.discordId) {
+          combinedMap.set(data.discordId, { id: document.id, ...data });
+        }
+      });
+
+      // Add/Merge everyone from the ambassador_directory
+      dirSnapshot.forEach((document) => {
+        const data = document.data();
+        if (combinedMap.has(data.discordId)) {
+          // Merge with existing admin data
+          const existing = combinedMap.get(data.discordId);
+          combinedMap.set(data.discordId, { 
+            ...existing, 
+            ...data, 
+            profile: existing.profile || { communityName: data.communityName } 
+          });
+        } else {
+          // Add new guest user
+          combinedMap.set(data.discordId, { 
+            id: document.id, 
+            ...data,
+            role: 'user',
+            email: 'Guest Auth',
+            profile: { communityName: data.communityName }
+          });
+        }
+      });
+
+      const discordUsers = Array.from(combinedMap.values());
+      
+      // Sort: Super Admins first, then Admins, then standard users
+      discordUsers.sort((a, b) => {
+        const roleA = a.role || 'user';
+        const roleB = b.role || 'user';
+        if (roleA === 'super_admin' && roleB !== 'super_admin') return -1;
+        if (roleA !== 'super_admin' && roleB === 'super_admin') return 1;
+        if (roleA === 'admin' && roleB !== 'admin') return -1;
+        if (roleA !== 'admin' && roleB === 'admin') return 1;
+        return 0;
+      });
+
+      setUsers(discordUsers);
+    } catch (error) {
+      console.error("Failed to fetch users:", error);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  const toggleHostRole = async (discordId: string, currentRole: string) => {
+    try {
+      const newRole = currentRole === 'host' ? 'user' : 'host';
+      await setDoc(doc(db, "ambassador_directory", discordId), { role: newRole }, { merge: true });
+      // The real-time listener in the modal's fetchUsers will pick this up automatically if set up correctly, 
+      // but to be safe, manually trigger a re-fetch:
+      fetchUsers();
+    } catch (err) {
+      console.error("Failed to update role", err);
+    }
+  };
+
   useEffect(() => {
-    const fetchUsers = async () => {
-      setLoading(true);
-      try {
-        // 1. Fetch Guest/Discord directory
-        const dirSnapshot = await getDocs(collection(db, "ambassador_directory"));
-        // 2. Fetch Admin users directory
-        const usersSnapshot = await getDocs(collection(db, "users"));
-        
-        const combinedMap = new Map();
-
-        // Add everyone from the admin users collection who has a Discord ID
-        usersSnapshot.forEach((doc) => {
-          const data = doc.data();
-          if (data.discordId) {
-            combinedMap.set(data.discordId, { id: doc.id, ...data });
-          }
-        });
-
-        // Add/Merge everyone from the ambassador_directory
-        dirSnapshot.forEach((doc) => {
-          const data = doc.data();
-          if (combinedMap.has(data.discordId)) {
-            // Merge with existing admin data
-            const existing = combinedMap.get(data.discordId);
-            combinedMap.set(data.discordId, { 
-              ...existing, 
-              ...data, 
-              profile: existing.profile || { communityName: data.communityName } 
-            });
-          } else {
-            // Add new guest user
-            combinedMap.set(data.discordId, { 
-              id: doc.id, 
-              ...data,
-              role: 'user',
-              email: 'Guest Auth',
-              profile: { communityName: data.communityName }
-            });
-          }
-        });
-
-        const discordUsers = Array.from(combinedMap.values());
-        
-        // Sort: Super Admins first, then Admins, then standard users
-        discordUsers.sort((a, b) => {
-          const roleA = a.role || 'user';
-          const roleB = b.role || 'user';
-          if (roleA === 'super_admin' && roleB !== 'super_admin') return -1;
-          if (roleA !== 'super_admin' && roleB === 'super_admin') return 1;
-          if (roleA === 'admin' && roleB !== 'admin') return -1;
-          if (roleA !== 'admin' && roleB === 'admin') return 1;
-          return 0;
-        });
-
-        setUsers(discordUsers);
-      } catch (error) {
-        console.error("Failed to fetch users:", error);
-      } finally {
-        setLoading(false);
-      }
-    };
-
     if (isOpen) {
       fetchUsers();
     }
-  }, [isOpen]);
+  }, [isOpen, fetchUsers]);
 
   if (!isOpen) return null;
 
@@ -157,6 +169,14 @@ export const AmbassadorDirectoryModal: React.FC<AmbassadorDirectoryModalProps> =
                           <span className="flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider bg-blue-500/20 text-blue-400 px-2 py-0.5 rounded-full border border-blue-500/30">
                             <Shield size={10} /> Admin
                           </span>
+                        )}
+                        {user.role !== 'super_admin' && user.role !== 'admin' && (
+                          <button 
+                            onClick={() => toggleHostRole(user.discordId, user.role || 'user')}
+                            className={`px-3 py-1 text-[10px] font-bold rounded-full border ${user.role === 'host' ? 'bg-purple-900/30 text-purple-400 border-purple-500/50 hover:bg-purple-900/50' : 'bg-gray-800 text-gray-400 border-gray-700 hover:text-white'}`}
+                          >
+                            {user.role === 'host' ? 'Revoke Host' : 'Make Host'}
+                          </button>
                         )}
                       </div>
                       <div className="text-xs text-gray-400 flex flex-col sm:flex-row sm:items-center sm:gap-3 mt-1">
