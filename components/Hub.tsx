@@ -35,6 +35,7 @@ import {
   Download,
   Loader2,
   Clock,
+  Palette,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Button } from "./Button";
@@ -436,6 +437,21 @@ export const Hub: React.FC<HubProps> = ({
       badge: "ALPHA",
     },
   ];
+
+  if (isSuperAdmin) {
+    tools.push({
+      id: "playground",
+      title: "Button Playground",
+      desc: "Admin view to preview button styles.",
+      icon: <Palette size={32} className="text-pink-400" />,
+      path: "/button-playground",
+      color: "border-pink-500/50 hover:border-pink-500 cursor-pointer",
+      shadowColor: "shadow-pink-500/20",
+      active: true,
+      locked: false,
+      badge: "ADMIN",
+    });
+  }
 
   const handleLogoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];

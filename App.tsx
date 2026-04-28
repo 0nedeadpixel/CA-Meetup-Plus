@@ -19,6 +19,7 @@ const ScavengerHuntLobby = React.lazy(() => import('./components/ScavengerHuntLo
 const TriviaView = React.lazy(() => import('./components/TriviaView').then(module => ({ default: module.TriviaView })));
 const TriviaLobby = React.lazy(() => import('./components/TriviaLobby').then(module => ({ default: module.TriviaLobby })));
 const TrainerLanding = React.lazy(() => import('./components/TrainerLanding').then(module => ({ default: module.TrainerLanding })));
+const ButtonPlayground = React.lazy(() => import('./components/ButtonPlayground').then(module => ({ default: module.ButtonPlayground })));
 
 const LoadingScreen = () => (
   <div className="min-h-screen bg-gray-950 flex flex-col items-center justify-center text-white">
@@ -351,6 +352,7 @@ const App: React.FC = () => {
 
           <Route path="/claim/:codeId/:codeValue" element={<RedeemPage />} />
           <Route path="/session/:sessionId" element={<RedeemPage />} />
+          <Route path="/button-playground" element={<ButtonPlayground />} />
         </Routes>
       </Suspense>
       </div>
