@@ -5,12 +5,12 @@ const ASSETS_TO_CACHE = [
   '/index.html',
   '/manifest.json',
   '/index.css',
-  '/img/cameetup-icon.png',
-  '/img/meetupplus.png',
-  '/img/logo.png',
-  '/img/happy-pika.gif',
-  '/img/pika-sad.gif',
-  '/img/pika-nomo.gif'
+  'https://app.fullertonpogo.com/images/cameetup-icon.png',
+  'https://app.fullertonpogo.com/images/meetupplus.png',
+  'https://app.fullertonpogo.com/images/logo.png',
+  'https://app.fullertonpogo.com/images/happy-pika.gif',
+  'https://app.fullertonpogo.com/images/pika-sad.gif',
+  'https://app.fullertonpogo.com/images/pika-nomo.gif'
 ];
 
 self.addEventListener('install', (event) => {
@@ -44,7 +44,7 @@ self.addEventListener('fetch', (event) => {
   if (event.request.method !== 'GET') return;
   
   // Don't intercept API endpoints or other protocols (skip firestore calls)
-  if (!event.request.url.startsWith(self.location.origin)) return;
+  if (!event.request.url.startsWith(self.location.origin) && !event.request.url.startsWith('https://app.fullertonpogo.com')) return;
 
   const url = new URL(event.request.url);
   
@@ -67,7 +67,7 @@ self.addEventListener('fetch', (event) => {
     url.pathname === '/index.html' || 
     url.pathname === '/index.css' || 
     url.pathname === '/manifest.json' || 
-    url.pathname.startsWith('/img/');
+    url.href.startsWith('https://app.fullertonpogo.com/images/');
 
   if (!isCachableAsset) return;
 
