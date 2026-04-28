@@ -5,6 +5,7 @@ interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
   variant?: 'primary' | 'secondary' | 'danger' | 'ghost' | 'niantic' | 'purple';
   fullWidth?: boolean;
   icon?: React.ReactNode;
+  watermark?: React.ReactNode;
 }
 
 export const Button: React.FC<ButtonProps> = ({ 
@@ -13,10 +14,11 @@ export const Button: React.FC<ButtonProps> = ({
   fullWidth = false, 
   className = '',
   icon,
+  watermark,
   ...props 
 }) => {
   
-  const baseStyles = "flex items-center justify-center gap-2 px-6 py-4 font-bold transition-all disabled:opacity-50 border uppercase tracking-wider active:translate-x-1 active:translate-y-1 active:shadow-none";
+  const baseStyles = "relative overflow-hidden group z-0 flex items-center justify-center gap-2 px-6 py-4 font-bold transition-all disabled:opacity-50 border uppercase tracking-wider active:translate-x-1 active:translate-y-1 active:shadow-none";
   
   const variants = {
     primary: "bg-primary text-white border-primary-dim shadow-md",
@@ -34,8 +36,18 @@ export const Button: React.FC<ButtonProps> = ({
       className={`${baseStyles} ${variants[variant]} ${widthClass} ${className}`}
       {...props}
     >
-      {icon && <span className="text-xl">{icon}</span>}
-      {children}
+      {/* Background Watermark Layer */}
+      {watermark && (
+        <div className="absolute -left-4 -bottom-6 opacity-10 group-hover:scale-125 group-hover:-rotate-12 transition-transform duration-700 pointer-events-none z-0 [&>*]:w-28 [&>*]:h-28 text-current">
+          {watermark}
+        </div>
+      )}
+      
+      {/* Foreground Content Layer */}
+      <span className="relative z-10 flex items-center justify-center gap-2 w-full">
+        {icon && <span className="text-xl">{icon}</span>}
+        {children}
+      </span>
     </button>
   );
 };
