@@ -113,7 +113,7 @@ export const Hub: React.FC<HubProps> = ({
   const [authLoading, setAuthLoading] = useState(false);
   const [secretTaps, setSecretTaps] = useState(0);
   const [discordRole, setDiscordRole] = useState<'guest' | 'host'>('guest');
-  const [showDiscordPrompt, setShowDiscordPrompt] = useState(true);
+  const [showDiscordPrompt, setShowDiscordPrompt] = useState(false);
 
   // TOAST STATE
   const [showToast, setShowToast] = useState(false);
@@ -342,6 +342,17 @@ export const Hub: React.FC<HubProps> = ({
       registerGuest();
     }
   }, [discordUser, settings.ambassador.communityName]);
+
+  // DISCORD PROMPT: Show modal on initial load if not linked
+  useEffect(() => {
+    if (!isDiscordLoading && !discordUser) {
+      const hasPrompted = sessionStorage.getItem('discord_prompted');
+      if (!hasPrompted) {
+        setShowDiscordPrompt(true);
+        sessionStorage.setItem('discord_prompted', 'true');
+      }
+    }
+  }, [isDiscordLoading, discordUser]);
 
   const communityName = settings.ambassador.communityName || "My Community";
   const needsSetup = !settings.ambassador.communityName;
@@ -1161,7 +1172,7 @@ export const Hub: React.FC<HubProps> = ({
 
       {/* Mandatory Discord Prompt Modal */}
       <AnimatePresence>
-        {showDiscordPrompt && !discordUser && (
+        {showDiscordPrompt && !isDiscordLoading && !discordUser && (
           <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
             <MotionDiv 
               initial={{ opacity: 0 }} 
