@@ -361,6 +361,30 @@ export const Hub: React.FC<HubProps> = ({
   const isSuperAdmin = userRole === "super_admin";
   const isAdmin = userRole === "admin" || isSuperAdmin;
 
+  // Listen for new ambassador signups (for Super Admins & Hosts)
+  useEffect(() => {
+    if (!isSuperAdmin && discordRole !== 'host') return;
+
+    let initialLoadObj = true;
+    const unsub = onSnapshot(collection(db, "ambassador_directory"), (snapshot) => {
+      if (initialLoadObj) {
+        initialLoadObj = false;
+        return;
+      }
+      snapshot.docChanges().forEach((change) => {
+        if (change.type === "added") {
+          const newUser = change.doc.data();
+          if (discordUser && newUser.discordId === discordUser.id) return;
+          addToast(`New Ambassador signed up: ${newUser.discordUsername || 'Someone'}!`, 'success');
+        }
+      });
+    }, (err) => {
+      console.error(err);
+    });
+    
+    return () => unsub();
+  }, [isSuperAdmin, discordRole, addToast, discordUser]);
+
   const tools = [
     {
       id: "distributor",

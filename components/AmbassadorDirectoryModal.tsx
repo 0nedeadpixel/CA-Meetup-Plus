@@ -161,17 +161,12 @@ export const AmbassadorDirectoryModal: React.FC<AmbassadorDirectoryModalProps> =
                       <div className="flex items-center gap-2">
                         <span className="font-bold text-white truncate max-w-[120px] sm:max-w-[200px]">{user.discordUsername}</span>
                       </div>
-                      <div className="text-xs text-gray-400 flex flex-col sm:flex-row sm:items-center sm:gap-2 mt-1 truncate">
+                      <div className="text-xs text-gray-400 flex flex-col mt-1 truncate">
                         {user.email !== 'Guest Auth' && (
                           <span className="truncate">{user.email}</span>
                         )}
                         {user.profile?.communityName && (
-                          <>
-                            {user.email !== 'Guest Auth' && (
-                              <span className="hidden sm:inline text-gray-600 shrink-0">•</span>
-                            )}
-                            <span className="text-gray-300 font-medium truncate">{user.profile.communityName}</span>
-                          </>
+                          <span className="text-[10px] text-gray-300 font-medium truncate">{user.profile.communityName}</span>
                         )}
                       </div>
                     </div>
@@ -191,9 +186,9 @@ export const AmbassadorDirectoryModal: React.FC<AmbassadorDirectoryModalProps> =
                     {user.role !== 'super_admin' && user.role !== 'admin' && (
                       <button 
                         onClick={() => toggleHostRole(user.discordId, user.role || 'user')}
-                        className={`px-3 py-1.5 text-[10px] font-bold rounded-full border whitespace-nowrap transition-colors ${user.role === 'host' ? 'bg-purple-900/30 text-purple-400 border-purple-500/50 hover:bg-purple-900/50' : 'bg-gray-800 text-gray-400 border-gray-700 hover:text-white'}`}
+                        className={`px-3 py-1.5 text-[10px] uppercase font-bold tracking-wider rounded-full border whitespace-nowrap transition-colors ${user.role === 'host' ? 'bg-purple-900/30 text-purple-400 border-purple-500/50 hover:bg-purple-900/50' : 'bg-transparent text-gray-600 border-gray-700 hover:text-gray-400'}`}
                       >
-                        {user.role === 'host' ? 'Revoke Host' : 'Make Host'}
+                        Host
                       </button>
                     )}
                   </div>

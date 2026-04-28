@@ -38,7 +38,7 @@ export const Button: React.FC<ButtonProps> = ({
     >
       {/* Background Watermark Layer */}
       {watermark && (
-        <div className="absolute -left-4 -bottom-6 opacity-10 group-hover:scale-125 group-hover:-rotate-12 transition-transform duration-700 pointer-events-none z-0 [&>*]:w-28 [&>*]:h-28 text-current">
+        <div className="absolute -left-4 -bottom-6 opacity-30 group-hover:scale-125 group-hover:-rotate-12 transition-transform duration-700 pointer-events-none z-0 [&>*]:w-28 [&>*]:h-28 text-current">
           {watermark}
         </div>
       )}
