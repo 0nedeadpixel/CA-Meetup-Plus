@@ -3,13 +3,13 @@
   "name": "CA Meetup Plus",
   "icons": [
     {
-      "src": "/img/cameetup-icon.png",
+      "src": "https://app.fullertonpogo.com/images/cameetup-icon.png",
       "sizes": "1024x1024",
       "type": "image/png",
       "purpose": "any"
     },
     {
-      "src": "/img/cameetup-icon.png",
+      "src": "https://app.fullertonpogo.com/images/cameetup-icon.png",
       "sizes": "1024x1024",
       "type": "image/png",
       "purpose": "maskable"
