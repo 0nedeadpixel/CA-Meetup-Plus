@@ -113,6 +113,7 @@ export const Hub: React.FC<HubProps> = ({
   const [authLoading, setAuthLoading] = useState(false);
   const [secretTaps, setSecretTaps] = useState(0);
   const [discordRole, setDiscordRole] = useState<'guest' | 'host'>('guest');
+  const [showDiscordPrompt, setShowDiscordPrompt] = useState(true);
 
   // TOAST STATE
   const [showToast, setShowToast] = useState(false);
@@ -1157,6 +1158,49 @@ export const Hub: React.FC<HubProps> = ({
           </button>
         </div>
       </div>
+
+      {/* Mandatory Discord Prompt Modal */}
+      <AnimatePresence>
+        {showDiscordPrompt && !discordUser && (
+          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+            <MotionDiv 
+              initial={{ opacity: 0 }} 
+              animate={{ opacity: 1 }} 
+              exit={{ opacity: 0 }} 
+              className="absolute inset-0 bg-black/80 backdrop-blur-sm" 
+              onClick={() => setShowDiscordPrompt(false)} 
+            />
+            <MotionDiv 
+              initial={{ opacity: 0, y: 150, scale: 0.8 }} 
+              animate={{ opacity: 1, y: 0, scale: 1 }} 
+              exit={{ opacity: 0, y: 50, scale: 0.9 }} 
+              transition={{ type: "spring", bounce: 0.6, duration: 0.7 }}
+              className="relative bg-gray-900 border border-[#5865F2]/30 shadow-2xl p-6 pt-12 w-full max-w-sm rounded-xl text-center mt-12"
+            >
+              {/* Breakout Character Image */}
+              <div className="absolute -top-24 left-0 right-0 flex justify-center pointer-events-none z-10">
+                <img 
+                    src="/img/character.webp" 
+                    alt="Guide" 
+                    className="h-32 w-auto drop-shadow-[0_10px_15px_rgba(0,0,0,0.5)]" 
+                />
+              </div>
+
+              <h3 className="text-xl font-bold text-white mb-2 relative z-20">Friendly Reminder!</h3>
+              <p className="text-sm text-gray-400 mb-6 relative z-20">In about a week, we will be locking the Code Distributor and other Host tools exclusively to Verified Ambassadors. Please link your Discord account soon to ensure uninterrupted access!</p>
+              
+              <div className="space-y-3 relative z-20">
+                <Button fullWidth onClick={() => { setShowDiscordPrompt(false); discordLogin(); }} className="bg-[#5865F2] hover:bg-[#4752C4] text-white border-none">
+                  Link Discord Now
+                </Button>
+                <Button fullWidth variant="ghost" onClick={() => setShowDiscordPrompt(false)} className="text-gray-500 hover:text-white">
+                  I'll do it later
+                </Button>
+              </div>
+            </MotionDiv>
+          </div>
+        )}
+      </AnimatePresence>
     </div>
   );
 };
