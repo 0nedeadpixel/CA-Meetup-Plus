@@ -121,6 +121,7 @@ export const Hub: React.FC<HubProps> = ({
   const [showToast, setShowToast] = useState(false);
   const [toastMessage, setToastMessage] = useState("");
   const [pendingRequestsCount, setPendingRequestsCount] = useState(0);
+  const [pendingApprovalCount, setPendingApprovalCount] = useState(0);
   const [isSyncing, setIsSyncing] = useState(false);
   const [showRestoreConfirm, setShowRestoreConfirm] = useState(false);
   const [showShredConfirm, setShowShredConfirm] = useState(false);
@@ -358,29 +359,28 @@ export const Hub: React.FC<HubProps> = ({
   const isSuperAdmin = userRole === "super_admin";
   const isAdmin = userRole === "admin" || isSuperAdmin;
 
-  // Listen for new ambassador signups (for Super Admins & Hosts)
+  // Listen for pending ambassadors (for Super Admins)
   useEffect(() => {
-    if (!isSuperAdmin && discordRole !== 'host') return;
+    if (!isSuperAdmin) {
+      setPendingApprovalCount(0);
+      return;
+    }
 
-    let initialLoadObj = true;
     const unsub = onSnapshot(collection(db, "ambassador_directory"), (snapshot) => {
-      if (initialLoadObj) {
-        initialLoadObj = false;
-        return;
-      }
-      snapshot.docChanges().forEach((change) => {
-        if (change.type === "added") {
-          const newUser = change.doc.data();
-          if (discordUser && newUser.discordId === discordUser.id) return;
-          addToast(`New Ambassador signed up: ${newUser.discordUsername || 'Someone'}!`, 'success');
+      let count = 0;
+      snapshot.forEach((docSnap) => {
+        const data = docSnap.data();
+        if (!data.role || data.role === 'user' || data.role === 'guest') {
+          count++;
         }
       });
+      setPendingApprovalCount(count);
     }, (err) => {
       console.error(err);
     });
     
     return () => unsub();
-  }, [isSuperAdmin, discordRole, addToast, discordUser]);
+  }, [isSuperAdmin]);
 
   const tools = [
     {
@@ -995,7 +995,7 @@ export const Hub: React.FC<HubProps> = ({
           className={`p-3 rounded-full border transition-colors relative ${isSuperAdmin ? "bg-green-600 border-green-500 text-white hover:bg-green-500" : isMenuOpen ? "bg-gray-800 border-gray-700 text-white" : "bg-gray-900 border-gray-800 text-gray-400 hover:text-white"}`}
         >
           {isMenuOpen ? <X size={24} /> : <Menu size={24} />}
-          {pendingRequestsCount > 0 && !isMenuOpen && (
+          {(pendingRequestsCount > 0 || pendingApprovalCount > 0) && !isMenuOpen && (
             <span className="absolute top-0 right-0 w-3 h-3 bg-red-500 rounded-full border-2 border-gray-950"></span>
           )}
         </button>
@@ -1068,10 +1068,17 @@ export const Hub: React.FC<HubProps> = ({
                     setIsMenuOpen(false);
                     setIsDirectoryOpen(true);
                   }}
-                  className="flex items-center gap-3 w-full p-3 hover:bg-gray-800 text-left transition-colors text-sm font-bold text-gray-300 hover:text-white"
+                  className="flex items-center justify-between w-full p-3 hover:bg-gray-800 text-left transition-colors text-sm font-bold text-gray-300 hover:text-white"
                 >
-                  <Users size={18} className="text-yellow-400" />
-                  Ambassador Directory
+                  <div className="flex items-center gap-3">
+                    <Users size={18} className="text-yellow-400" />
+                    Ambassador Directory
+                  </div>
+                  {pendingApprovalCount > 0 && (
+                    <span className="bg-red-500 text-white text-[10px] px-2 py-0.5 rounded-full">
+                      {pendingApprovalCount}
+                    </span>
+                  )}
                 </button>
               )}
 
