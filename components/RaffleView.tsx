@@ -227,13 +227,13 @@ export const RaffleView: React.FC<RaffleViewProps> = ({ settings, codes = [], on
           if (docSnap.exists()) {
               const data = docSnap.data() as any;
               
-              // SECURITY PADLOCK
+              // STRICT PADLOCK: You can ONLY access a live raffle if you created it.
               const isOwner = data.hostUid 
                   ? currentUser && data.hostUid === currentUser.uid
                   : data.hostDevice === myDeviceId;
 
-              if (!isOwner && userRole !== 'super_admin') {
-                  addToast("Unauthorized: This Raffle belongs to another Host.", 'error');
+              if (!isOwner) {
+                  addToast("Unauthorized: You cannot access another Host's active raffle.", 'error');
                   setSessionId(null);
                   localStorage.removeItem('pogo_raffle_active_session');
                   return;

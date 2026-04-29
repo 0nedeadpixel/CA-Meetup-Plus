@@ -89,8 +89,7 @@ export const ScavengerHuntView: React.FC<ScavengerHuntViewProps> = ({ settings }
       const unsub = onSnapshot(q, (snap: any) => {
           const list = snap.docs.map((d: any) => ({ ...d.data() } as ScavengerHunt))
               .filter((hunt: ScavengerHunt) => {
-                  // Everyone (including Super Admins) only sees their own or unassigned hunts
-                  if (!hunt.hostUid) return true; 
+                  // Strict Padlock: Only show hunts explicitly owned by this user
                   if (currentUser && hunt.hostUid === currentUser.uid) return true;
                   return false;
               });
