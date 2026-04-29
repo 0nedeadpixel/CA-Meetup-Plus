@@ -61,10 +61,16 @@ export const AmbassadorDirectoryModal: React.FC<AmbassadorDirectoryModalProps> =
 
       const discordUsers = Array.from(combinedMap.values());
       
-      // Sort: Super Admins first, then Admins, then standard users
+      // Sort: Users (Pending Hosts) first, then Super Admins, then Admins, then Hosts
       discordUsers.sort((a, b) => {
         const roleA = a.role || 'user';
         const roleB = b.role || 'user';
+        
+        const aIsUser = roleA === 'user';
+        const bIsUser = roleB === 'user';
+        if (aIsUser && !bIsUser) return -1;
+        if (!aIsUser && bIsUser) return 1;
+
         if (roleA === 'super_admin' && roleB !== 'super_admin') return -1;
         if (roleA !== 'super_admin' && roleB === 'super_admin') return 1;
         if (roleA === 'admin' && roleB !== 'admin') return -1;
@@ -146,6 +152,8 @@ export const AmbassadorDirectoryModal: React.FC<AmbassadorDirectoryModalProps> =
                     <div className={`h-12 w-12 rounded-full flex-shrink-0 overflow-hidden border-2 ${
                       (user.role === 'super_admin' || user.role === 'admin') 
                         ? 'border-purple-500 shadow-[0_0_10px_rgba(168,85,247,0.5)]' 
+                        : user.role === 'host'
+                        ? 'border-green-500 shadow-[0_0_10px_rgba(34,197,94,0.5)]'
                         : 'border-gray-600 bg-gray-700'
                     }`}>
                       {user.discordAvatar ? (
