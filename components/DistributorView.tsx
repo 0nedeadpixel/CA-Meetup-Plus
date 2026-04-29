@@ -6,7 +6,8 @@ import { QRCodeSVG } from 'qrcode.react';
 import { doc, writeBatch, collection, onSnapshot, query, where, getDocs, setDoc, updateDoc, serverTimestamp, getDoc, runTransaction, orderBy, limit, increment } from 'firebase/firestore';
 // @ts-ignore
 import { logEvent } from 'firebase/analytics';
-import { db, analytics } from '../firebase';
+import { signInWithEmailAndPassword, signOut, onAuthStateChanged } from 'firebase/auth';
+import { db, analytics, auth } from '../firebase';
 import { CodeItem, AppSettings, ReportItem, SessionData } from '../types';
 import { Button } from './Button';
 import { Check, Wifi, ArrowLeft, Loader2, Zap, AlertTriangle, Printer, PauseCircle, PlayCircle, StopCircle, Copy, AlertCircle, RefreshCw, Download, X, Edit2, Save, Link as LinkIcon, Maximize2, XCircle, User } from 'lucide-react';
@@ -76,6 +77,17 @@ export const DistributorView: React.FC<DistributorProps> = ({ codes, onSessionCo
   const [showEndSessionModal, setShowEndSessionModal] = useState(false);
   const [showNfcInfoModal, setShowNfcInfoModal] = useState(false);
   
+  const [currentUser, setCurrentUser] = useState<any>(null);
+  const [authLoaded, setAuthLoaded] = useState(false);
+
+  useEffect(() => {
+      const unsub = onAuthStateChanged(auth, (user) => {
+          setCurrentUser(user);
+          setAuthLoaded(true);
+      });
+      return () => unsub();
+  }, []);
+
   // Raffle Linking State
   // Removed automatic linking state
 
@@ -148,6 +160,7 @@ export const DistributorView: React.FC<DistributorProps> = ({ codes, onSessionCo
                 createdAt: serverTimestamp(),
                 totalCodes: codesToUpload.length,
                 hostDevice: localStorage.getItem('pogo_device_id') || 'unknown',
+                hostUid: auth.currentUser ? auth.currentUser.uid : null, // STRICT PADLOCK LINK
                 distributionCap: settings.distributionCap,
                 blockIncognito: settings.blockIncognito || false,
                 isTestSession: settings.testMode,
@@ -207,6 +220,22 @@ export const DistributorView: React.FC<DistributorProps> = ({ codes, onSessionCo
     const sessionUnsub = onSnapshot(doc(db, 'sessions', sessionId), (docSnap) => {
         if (docSnap.exists()) {
             const data = docSnap.data() as SessionData;
+            
+            // STRICT PADLOCK
+            if (authLoaded) {
+                const myDeviceId = localStorage.getItem('pogo_device_id') || 'unknown';
+                const isOwner = data.hostUid 
+                    ? currentUser && data.hostUid === currentUser.uid
+                    : data.hostDevice === myDeviceId;
+
+                if (!isOwner) {
+                    addToast("Unauthorized: You cannot access another Host's active session.", 'error');
+                    localStorage.removeItem('pogo_last_active_session');
+                    onExit();
+                    return;
+                }
+            }
+
             // Sync Live Cap from DB
             setLiveCap(data.distributionCap || 0);
             if (data.totalCodes) setTotalCodesInSession(data.totalCodes);
@@ -216,6 +245,9 @@ export const DistributorView: React.FC<DistributorProps> = ({ codes, onSessionCo
             else if (data.paused) setStatus('paused');
             else if (data.distributionCap > 0 && data.claimedCount >= data.distributionCap) setStatus('cap_reached');
             else setStatus('active');
+        } else {
+            setStatus('ended');
+            localStorage.removeItem('pogo_last_active_session');
         }
     });
 

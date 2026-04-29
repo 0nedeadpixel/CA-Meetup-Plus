@@ -116,17 +116,28 @@ export const Dashboard: React.FC<DashboardProps> = ({
       const unsub = onSnapshot(doc(db, 'sessions', sessionId), (docSnap) => {
           if (docSnap.exists()) {
               const data = docSnap.data() as SessionData;
-              if (data.active) {
+              
+              // STRICT PADLOCK
+              const myDeviceId = localStorage.getItem('pogo_device_id') || 'unknown';
+              const isOwner = data.hostUid 
+                  ? auth.currentUser && data.hostUid === auth.currentUser.uid
+                  : data.hostDevice === myDeviceId;
+
+              if (data.active && isOwner) {
                   setActiveSession({
                       id: sessionId,
                       claimed: data.claimedCount || 0,
                       cap: data.distributionCap || 0
                   });
               } else {
+                  if (!isOwner && data.active) {
+                      localStorage.removeItem('pogo_last_active_session');
+                  }
                   setActiveSession(null);
               }
           } else {
               setActiveSession(null);
+              localStorage.removeItem('pogo_last_active_session');
           }
       });
       return () => unsub();

@@ -60,6 +60,7 @@ export interface SessionData {
   reportCount?: number;
   replacementCount?: number;
   hostDevice?: string; 
+  hostUid?: string | null;
   ghostSessionId?: string;
   raffleLink?: string; 
   linkedRaffleId?: string; // ID of the raffle session linked to this distribution
