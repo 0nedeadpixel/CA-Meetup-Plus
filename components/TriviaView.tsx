@@ -248,6 +248,19 @@ export const TriviaView: React.FC<TriviaViewProps> = ({ settings }) => {
                 setSession(null);
                 if (viewMode !== 'DASHBOARD') setViewMode('DASHBOARD');
             } else {
+                // SECURITY PADLOCK
+                const isOwner = data.hostUid 
+                    ? currentUser && data.hostUid === currentUser.uid
+                    : data.hostDevice === myDeviceId;
+
+                if (!isOwner && userRole !== 'super_admin') {
+                    addToast("Unauthorized: This Trivia game belongs to another Host.", 'error');
+                    setSessionId(null);
+                    setSession(null);
+                    setViewMode('DASHBOARD');
+                    return;
+                }
+
                 setSession(data);
                 
                 // Route based on mode and status

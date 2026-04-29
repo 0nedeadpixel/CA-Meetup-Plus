@@ -226,6 +226,19 @@ export const RaffleView: React.FC<RaffleViewProps> = ({ settings, codes = [], on
       const unsubSession = onSnapshot(doc(db, 'raffle_sessions', sessionId), (docSnap) => {
           if (docSnap.exists()) {
               const data = docSnap.data() as any;
+              
+              // SECURITY PADLOCK
+              const isOwner = data.hostUid 
+                  ? currentUser && data.hostUid === currentUser.uid
+                  : data.hostDevice === myDeviceId;
+
+              if (!isOwner && userRole !== 'super_admin') {
+                  addToast("Unauthorized: This Raffle belongs to another Host.", 'error');
+                  setSessionId(null);
+                  localStorage.removeItem('pogo_raffle_active_session');
+                  return;
+              }
+
               if (data.active === false) {
                   setSessionId(null);
                   localStorage.removeItem('pogo_raffle_active_session');
