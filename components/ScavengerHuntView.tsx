@@ -29,6 +29,16 @@ export const ScavengerHuntView: React.FC<ScavengerHuntViewProps> = ({ settings }
   
   const [currentUser, setCurrentUser] = useState(auth.currentUser);
   const [userRole, setUserRole] = useState<'super_admin' | 'admin' | 'host' | 'user'>('user');
+  const [myDeviceId, setMyDeviceId] = useState<string>('');
+
+  useEffect(() => {
+      let id = localStorage.getItem('pogo_device_id');
+      if (!id || id === 'host' || id === 'unknown') {
+          id = uuidv4();
+          localStorage.setItem('pogo_device_id', id);
+      }
+      setMyDeviceId(id);
+  }, []);
 
   useEffect(() => {
       const unsub = onAuthStateChanged(auth, async (user: any) => {
@@ -82,21 +92,22 @@ export const ScavengerHuntView: React.FC<ScavengerHuntViewProps> = ({ settings }
 
   // 1. Fetch Hunts
   useEffect(() => {
-      // Allow super_admins, OR people with a currentUser, OR people with a 'host' role
-      if (!currentUser && userRole !== 'super_admin' && userRole !== 'host') return;
+      if (!currentUser && userRole !== 'super_admin' && userRole !== 'host' && !myDeviceId) return;
 
       const q = query(collection(db, 'scavenger_hunts'), orderBy('createdAt', 'desc'));
       const unsub = onSnapshot(q, (snap: any) => {
-          const list = snap.docs.map((d: any) => ({ ...d.data() } as ScavengerHunt))
-              .filter((hunt: ScavengerHunt) => {
-                  // Strict Padlock: Only show hunts explicitly owned by this user
-                  if (currentUser && hunt.hostUid === currentUser.uid) return true;
-                  return false;
+          const list = snap.docs.map((d: any) => ({ ...d.data() } as any))
+              .filter((hunt: any) => {
+                  // Strict Padlock: Show if Cloud UID matches OR if Local Device ID matches
+                  if (hunt.hostUid) {
+                      return currentUser && hunt.hostUid === currentUser.uid;
+                  }
+                  return hunt.hostDevice === myDeviceId;
               });
           setHunts(list);
       });
       return () => unsub();
-  }, [currentUser, userRole]);
+  }, [currentUser, userRole, myDeviceId]);
 
   // 2. Fetch Participants (If Monitoring)
   useEffect(() => {
@@ -129,10 +140,14 @@ export const ScavengerHuntView: React.FC<ScavengerHuntViewProps> = ({ settings }
                           return;
                       }
                       
-                      const huntData = huntSnap.data() as ScavengerHunt;
+                      const huntData = huntSnap.data() as any;
                       
                       // SECURITY CHECK: Does this belong to the logged-in Ambassador?
-                      if (huntData.hostUid && huntData.hostUid !== currentUser.uid) {
+                      const isOwner = huntData.hostUid 
+                          ? currentUser && huntData.hostUid === currentUser.uid
+                          : huntData.hostDevice === myDeviceId;
+
+                      if (!isOwner) {
                           addToast("Unauthorized: This hunt belongs to another Ambassador.", 'error');
                           const currentUrl = window.location.href;
                           const [baseUrl] = currentUrl.split('?');
@@ -183,7 +198,7 @@ export const ScavengerHuntView: React.FC<ScavengerHuntViewProps> = ({ settings }
 
   const handleCreateNew = () => {
       const newId = uuidv4();
-      const newHunt: ScavengerHunt = {
+      const newHunt: any = {
           id: newId,
           title: '',
           description: '',
@@ -192,9 +207,10 @@ export const ScavengerHuntView: React.FC<ScavengerHuntViewProps> = ({ settings }
           gameMode: 'sequential',
           pokemonPool: [],
           ambassador: settings.ambassador,
-          hostUid: currentUser?.uid || ''
+          hostUid: currentUser ? currentUser.uid : null,
+          hostDevice: myDeviceId
       };
-      setCurrentHunt(newHunt);
+      setCurrentHunt(newHunt as ScavengerHunt);
       // Reset Form
       setHuntTitle('');
       setHuntDesc('');
