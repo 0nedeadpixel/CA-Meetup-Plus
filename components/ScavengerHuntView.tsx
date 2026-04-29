@@ -89,9 +89,7 @@ export const ScavengerHuntView: React.FC<ScavengerHuntViewProps> = ({ settings }
       const unsub = onSnapshot(q, (snap: any) => {
           const list = snap.docs.map((d: any) => ({ ...d.data() } as ScavengerHunt))
               .filter((hunt: ScavengerHunt) => {
-                  // Super Admins see everything
-                  if (userRole === 'super_admin') return true;
-                  // Hosts/Admins only see their own (or unassigned test hunts)
+                  // Everyone (including Super Admins) only sees their own or unassigned hunts
                   if (!hunt.hostUid) return true; 
                   if (currentUser && hunt.hostUid === currentUser.uid) return true;
                   return false;
