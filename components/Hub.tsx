@@ -109,6 +109,7 @@ export const Hub: React.FC<HubProps> = ({
   const [secretTaps, setSecretTaps] = useState(0);
   const [discordRole, setDiscordRole] = useState<'guest' | 'host'>('guest');
   const [showDiscordPrompt, setShowDiscordPrompt] = useState(false);
+  const [timeLeft, setTimeLeft] = useState({ days: 0, hours: 0, minutes: 0, seconds: 0 });
 
   // TOAST STATE
   const [showToast, setShowToast] = useState(false);
@@ -345,6 +346,31 @@ export const Hub: React.FC<HubProps> = ({
       setShowDiscordPrompt(true);
     }
   }, [isDiscordLoading, discordUser]);
+
+  // COUNTDOWN TIMER: Ticks down to Friday night
+  useEffect(() => {
+    const targetDate = new Date('2026-05-01T23:59:59').getTime();
+
+    const interval = setInterval(() => {
+      const now = new Date().getTime();
+      const distance = targetDate - now;
+
+      if (distance < 0) {
+        clearInterval(interval);
+        setTimeLeft({ days: 0, hours: 0, minutes: 0, seconds: 0 });
+        return;
+      }
+
+      setTimeLeft({
+        days: Math.floor(distance / (1000 * 60 * 60 * 24)),
+        hours: Math.floor((distance % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60)),
+        minutes: Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60)),
+        seconds: Math.floor((distance % (1000 * 60)) / 1000)
+      });
+    }, 1000);
+
+    return () => clearInterval(interval);
+  }, []);
 
   const communityName = settings.ambassador.communityName || "My Community";
   const needsSetup = !settings.ambassador.communityName;
@@ -1217,8 +1243,20 @@ export const Hub: React.FC<HubProps> = ({
                 />
               </div>
 
-              <h3 className="text-xl font-bold text-white mb-2 relative z-20">Friendly Reminder!</h3>
-              <p className="text-sm text-gray-400 mb-6 relative z-20">In about a week, we will be locking the Code Distributor and other Host tools exclusively to Verified Ambassadors. Please link your Discord account soon to ensure uninterrupted access!</p>
+              <h3 className="text-xl font-bold text-white mb-2 relative z-20">Host Tools Locking Soon!</h3>
+              <p className="text-sm text-gray-400 mb-4 relative z-20">
+                We are locking the Code Distributor and other Host tools exclusively to Verified Ambassadors. Please link your Discord account before the deadline to ensure uninterrupted access!
+              </p>
+              
+              {/* Live Countdown Timer */}
+              <div className="flex justify-center gap-2 mb-6 relative z-20">
+                {Object.entries(timeLeft).map(([label, value]) => (
+                  <div key={label} className="bg-gray-950 border border-[#5865F2]/30 rounded-lg p-2 w-16 text-center shadow-inner">
+                    <div className="text-xl font-black text-white font-mono">{value.toString().padStart(2, '0')}</div>
+                    <div className="text-[9px] uppercase tracking-widest text-[#5865F2] font-bold mt-0.5">{label}</div>
+                  </div>
+                ))}
+              </div>
               
               <div className="space-y-3 relative z-20">
                 {/* Primary Discord Button with Watermark */}
