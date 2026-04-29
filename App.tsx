@@ -241,26 +241,6 @@ const App: React.FC = () => {
     }));
   };
 
-  const handleRecoverCodes = (recoveredCodes: { code: string, ign: string, date: string, source: string }[]) => {
-    const existingValues = new Set(codes.map(c => c.value));
-    const newItems: CodeItem[] = recoveredCodes
-      .filter(rc => !existingValues.has(rc.code))
-      .map(rc => ({
-        id: uuidv4(),
-        value: rc.code,
-        isUsed: true,
-        dateAdded: Date.now(),
-        claimedAt: new Date(rc.date).getTime() || Date.now(),
-        claimedByIgn: rc.ign,
-        source: (rc.source as any) || 'direct_scan'
-      }));
-
-    if (newItems.length > 0) {
-      setCodes(prev => [...prev, ...newItems]);
-    }
-    return { imported: newItems.length, duplicates: recoveredCodes.length - newItems.length };
-  };
-
   useEffect(() => {
     const path = location.pathname;
     let title = 'CA Meetup +';
@@ -303,7 +283,7 @@ const App: React.FC = () => {
 
       <Suspense fallback={<LoadingScreen />}>
         <Routes>
-          <Route path="/" element={<Hub codes={codes} onUpdateCodes={setCodes} settings={settings} onUpdateSettings={setSettings} onRecoverCodes={handleRecoverCodes} />} />
+          <Route path="/" element={<Hub codes={codes} onUpdateCodes={setCodes} settings={settings} onUpdateSettings={setSettings} />} />
           
           <Route path="/distributor" element={
               <Dashboard 

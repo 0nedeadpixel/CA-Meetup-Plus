@@ -30,7 +30,6 @@ import {
   Menu,
   UserCircle,
   Globe,
-  DatabaseBackup,
   Upload,
   Download,
   Loader2,
@@ -61,7 +60,6 @@ import {
 import { auth, db } from "../firebase";
 import { PrivacyModal } from "./PrivacyModal";
 import { ConfirmationModal } from "./ConfirmationModal";
-import { DataRecoveryModal } from "./DataRecoveryModal";
 import { GlobalSettingsModal } from "./GlobalSettingsModal";
 import { AmbassadorDirectoryModal } from "./AmbassadorDirectoryModal";
 import { useToast } from "./ToastContext";
@@ -75,9 +73,6 @@ interface HubProps {
   onUpdateCodes?: (c: any[]) => void;
   settings: AppSettings;
   onUpdateSettings: (s: AppSettings) => void;
-  onRecoverCodes: (
-    codes: { code: string; ign: string; date: string; source: string }[],
-  ) => { imported: number; duplicates: number };
 }
 
 export const Hub: React.FC<HubProps> = ({
@@ -85,14 +80,12 @@ export const Hub: React.FC<HubProps> = ({
   onUpdateCodes,
   settings,
   onUpdateSettings,
-  onRecoverCodes,
 }) => {
   const navigate = useNavigate();
   const { addToast } = useToast();
   const [isSettingsMode, setIsSettingsMode] = useState(false);
   const [showSetupComplete, setShowSetupComplete] = useState(false);
   const [isPrivacyOpen, setIsPrivacyOpen] = useState(false);
-  const [isDataRecoveryOpen, setIsDataRecoveryOpen] = useState(false);
   const [isGlobalSettingsOpen, setIsGlobalSettingsOpen] = useState(false);
   const [isDirectoryOpen, setIsDirectoryOpen] = useState(false);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -945,12 +938,6 @@ export const Hub: React.FC<HubProps> = ({
         isOpen={isPrivacyOpen}
         onClose={() => setIsPrivacyOpen(false)}
       />
-      <DataRecoveryModal
-        isOpen={isDataRecoveryOpen}
-        onClose={() => setIsDataRecoveryOpen(false)}
-        communityName={communityName}
-        onRecoverCodes={onRecoverCodes}
-      />
       <GlobalSettingsModal
         isOpen={isGlobalSettingsOpen}
         onClose={() => setIsGlobalSettingsOpen(false)}
@@ -1049,17 +1036,6 @@ export const Hub: React.FC<HubProps> = ({
               >
                 <Settings size={18} className="text-gray-400" />
                 Community Settings
-              </button>
-
-              <button
-                onClick={() => {
-                  setIsMenuOpen(false);
-                  setIsDataRecoveryOpen(true);
-                }}
-                className="flex items-center gap-3 w-full p-3 hover:bg-gray-800 text-left transition-colors text-sm font-bold text-gray-300 hover:text-white"
-              >
-                <DatabaseBackup size={18} className="text-blue-400" />
-                Data Recovery
               </button>
 
               {isSuperAdmin && (
