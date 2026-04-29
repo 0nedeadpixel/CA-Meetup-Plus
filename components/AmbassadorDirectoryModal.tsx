@@ -143,7 +143,11 @@ export const AmbassadorDirectoryModal: React.FC<AmbassadorDirectoryModalProps> =
               {users.map((user) => (
                 <div key={user.id} className="flex items-center justify-between p-4 bg-gray-800/50 border border-gray-700/50 rounded-xl hover:bg-gray-800 transition-colors gap-2">
                   <div className="flex items-center gap-3 overflow-hidden">
-                    <div className={`h-10 w-10 sm:h-12 sm:w-12 rounded-full bg-gray-700 flex-shrink-0 overflow-hidden border-2 ${user.discordInServer ? 'border-green-500' : 'border-gray-600'}`}>
+                    <div className={`h-12 w-12 rounded-full flex-shrink-0 overflow-hidden border-2 ${
+                      (user.role === 'super_admin' || user.role === 'admin') 
+                        ? 'border-purple-500 shadow-[0_0_10px_rgba(168,85,247,0.5)]' 
+                        : 'border-gray-600 bg-gray-700'
+                    }`}>
                       {user.discordAvatar ? (
                         <img 
                           src={`https://cdn.discordapp.com/avatars/${user.discordId}/${user.discordAvatar}.png`} 
@@ -173,24 +177,12 @@ export const AmbassadorDirectoryModal: React.FC<AmbassadorDirectoryModalProps> =
                   </div>
 
                   <div className="flex items-center shrink-0">
-                    {user.role === 'super_admin' && (
-                      <span className="flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider bg-purple-500/20 text-purple-400 px-2 py-0.5 rounded-full border border-purple-500/30">
-                        <ShieldCheck size={10} /> <span className="hidden sm:inline">Super Admin</span><span className="sm:hidden">Admin</span>
-                      </span>
-                    )}
-                    {user.role === 'admin' && (
-                      <span className="flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider bg-blue-500/20 text-blue-400 px-2 py-0.5 rounded-full border border-blue-500/30">
-                        <Shield size={10} /> Admin
-                      </span>
-                    )}
-                    {user.role !== 'super_admin' && user.role !== 'admin' && (
-                      <button 
-                        onClick={() => toggleHostRole(user.discordId, user.role || 'user')}
-                        className={`px-3 py-1.5 text-[10px] uppercase font-bold tracking-wider rounded-full border whitespace-nowrap transition-colors ${user.role === 'host' ? 'bg-purple-900/30 text-purple-400 border-purple-500/50 hover:bg-purple-900/50' : 'bg-transparent text-gray-600 border-gray-700 hover:text-gray-400'}`}
-                      >
-                        Host
-                      </button>
-                    )}
+                    <button 
+                      onClick={() => toggleHostRole(user.discordId, user.role || 'user')}
+                      className={`mt-2 px-3 py-1 text-xs font-bold rounded-full border transition-colors ${user.role === 'host' ? 'bg-purple-900/30 text-purple-400 border-purple-500/50 hover:bg-purple-900/50' : 'bg-gray-800 text-gray-400 border-gray-700 hover:text-white'}`}
+                    >
+                      {user.role === 'host' ? 'Revoke Host' : 'Make Host'}
+                    </button>
                   </div>
                 </div>
               ))}

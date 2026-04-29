@@ -306,12 +306,15 @@ export const Hub: React.FC<HubProps> = ({
       const unsub = onSnapshot(doc(db, "ambassador_directory", discordUser.id), (docSnap) => {
         if (docSnap.exists()) {
           const data = docSnap.data();
-          setDiscordRole(data.role === 'host' ? 'host' : 'guest');
+          const newRole = data.role === 'host' ? 'host' : 'guest';
+          setDiscordRole(newRole);
+          sessionStorage.setItem('discord_role', newRole); // Save for other components
         }
       });
       return () => unsub();
     } else {
       setDiscordRole('guest');
+      sessionStorage.removeItem('discord_role');
     }
   }, [discordUser]);
 

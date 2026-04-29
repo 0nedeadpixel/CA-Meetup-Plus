@@ -28,9 +28,28 @@ export const ScavengerHuntView: React.FC<ScavengerHuntViewProps> = ({ settings }
   const { addToast } = useToast();
   
   const [currentUser, setCurrentUser] = useState(auth.currentUser);
+  const [userRole, setUserRole] = useState<'super_admin' | 'admin' | 'host' | 'user'>('user');
 
   useEffect(() => {
-      const unsub = onAuthStateChanged(auth, (user: any) => setCurrentUser(user));
+      const unsub = onAuthStateChanged(auth, async (user: any) => {
+          setCurrentUser(user);
+          if (user) {
+              try {
+                  const snap = await getDoc(doc(db, 'users', user.uid));
+                  if (snap.exists()) {
+                      const data = snap.data() as any;
+                      let r = (data.role || 'user').toLowerCase();
+                      if (user.email === 'elmersdesign@gmail.com') r = 'super_admin';
+                      setUserRole(r as any);
+                  }
+              } catch (e) { console.error("Error fetching role", e); }
+          } else {
+              // Fallback: check session storage for Discord host role if no Firebase user
+              const storedRole = sessionStorage.getItem('discord_role');
+              if (storedRole === 'host') setUserRole('host');
+              else setUserRole('user');
+          }
+      });
       return () => unsub();
   }, []);
 
@@ -63,15 +82,24 @@ export const ScavengerHuntView: React.FC<ScavengerHuntViewProps> = ({ settings }
 
   // 1. Fetch Hunts
   useEffect(() => {
-      if (!currentUser) return;
+      // Allow super_admins, OR people with a currentUser, OR people with a 'host' role
+      if (!currentUser && userRole !== 'super_admin' && userRole !== 'host') return;
+
       const q = query(collection(db, 'scavenger_hunts'), orderBy('createdAt', 'desc'));
       const unsub = onSnapshot(q, (snap: any) => {
           const list = snap.docs.map((d: any) => ({ ...d.data() } as ScavengerHunt))
-              .filter((hunt: ScavengerHunt) => !hunt.hostUid || hunt.hostUid === currentUser.uid);
+              .filter((hunt: ScavengerHunt) => {
+                  // Super Admins see everything
+                  if (userRole === 'super_admin') return true;
+                  // Hosts/Admins only see their own (or unassigned test hunts)
+                  if (!hunt.hostUid) return true; 
+                  if (currentUser && hunt.hostUid === currentUser.uid) return true;
+                  return false;
+              });
           setHunts(list);
       });
       return () => unsub();
-  }, [currentUser]);
+  }, [currentUser, userRole]);
 
   // 2. Fetch Participants (If Monitoring)
   useEffect(() => {
