@@ -952,7 +952,7 @@ export const Hub: React.FC<HubProps> = ({
         <div className="flex items-center gap-4">
           <div className="relative shrink-0 w-12 h-12 flex items-center justify-center">
             <img
-              src="https://app.fullertonpogo.com/images/meetupplus.png"
+              src="https://app.fullertonpogo.com/img/meetupplus.png"
               alt="CA Logo"
               className="w-full h-full object-contain"
             />
@@ -1211,7 +1211,7 @@ export const Hub: React.FC<HubProps> = ({
               {/* Breakout Character Image */}
               <div className="absolute -top-24 left-0 right-0 flex justify-center pointer-events-none z-10">
                 <img 
-                    src="https://app.fullertonpogo.com/images/character.webp" 
+                    src="https://app.fullertonpogo.com/img/character.webp" 
                     alt="Guide" 
                     className="h-32 w-auto drop-shadow-[0_10px_15px_rgba(0,0,0,0.5)]" 
                 />

@@ -5,12 +5,12 @@ const ASSETS_TO_CACHE = [
   '/index.html',
   '/manifest.json',
   '/index.css',
-  'https://app.fullertonpogo.com/images/cameetup-icon.png',
-  'https://app.fullertonpogo.com/images/meetupplus.png',
-  'https://app.fullertonpogo.com/images/logo.png',
-  'https://app.fullertonpogo.com/images/happy-pika.gif',
-  'https://app.fullertonpogo.com/images/pika-sad.gif',
-  'https://app.fullertonpogo.com/images/pika-nomo.gif'
+  'https://app.fullertonpogo.com/img/cameetup-icon.png',
+  'https://app.fullertonpogo.com/img/meetupplus.png',
+  'https://app.fullertonpogo.com/img/logo.png',
+  'https://app.fullertonpogo.com/img/happy-pika.gif',
+  'https://app.fullertonpogo.com/img/pika-sad.gif',
+  'https://app.fullertonpogo.com/img/pika-nomo.gif'
 ];
 
 self.addEventListener('install', (event) => {
@@ -67,7 +67,7 @@ self.addEventListener('fetch', (event) => {
     url.pathname === '/index.html' || 
     url.pathname === '/index.css' || 
     url.pathname === '/manifest.json' || 
-    url.href.startsWith('https://app.fullertonpogo.com/images/');
+    url.href.startsWith('https://app.fullertonpogo.com/img/');
 
   if (!isCachableAsset) return;
 
