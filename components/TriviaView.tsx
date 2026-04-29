@@ -248,13 +248,13 @@ export const TriviaView: React.FC<TriviaViewProps> = ({ settings }) => {
                 setSession(null);
                 if (viewMode !== 'DASHBOARD') setViewMode('DASHBOARD');
             } else {
-                // SECURITY PADLOCK
+                // STRICT PADLOCK: You can ONLY access a live trivia game if you created it.
                 const isOwner = data.hostUid 
                     ? currentUser && data.hostUid === currentUser.uid
                     : data.hostDevice === myDeviceId;
 
-                if (!isOwner && userRole !== 'super_admin') {
-                    addToast("Unauthorized: This Trivia game belongs to another Host.", 'error');
+                if (!isOwner) {
+                    addToast("Unauthorized: You cannot access another Host's active Trivia session.", 'error');
                     setSessionId(null);
                     setSession(null);
                     setViewMode('DASHBOARD');
