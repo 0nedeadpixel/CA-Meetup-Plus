@@ -194,11 +194,10 @@ export const RedeemPage: React.FC = () => {
                     // 1. Jitter to prevent collision (increases with attempts)
                     await new Promise(resolve => setTimeout(resolve, Math.random() * (500 + attempt * 500)));
 
-                    // 2. Fetch batch of codes
+                    // 2. Fetch batch of codes (Removed orderBy to prevent filtering codes missing timestamps)
                     const q = query(
                         collection(db, `sessions/${sessionId}/codes`), 
                         where("claimed", "==", false), 
-                        orderBy("dateAdded", "asc"),
                         limit(20)
                     );
                     const snapshot = await getDocs(q);
