@@ -248,7 +248,7 @@ export const ScavengerHuntLobby: React.FC = () => {
             {/* Retro 3-Column Target Grid */}
             <div className="w-full max-w-md mx-auto p-4">
               <div className="grid grid-cols-3 gap-3">
-                {participant.assignedTargets?.map((target, index) => {
+                {participant.assignedTargets?.map((target) => {
                   const isFound = participant.foundTargetIds?.includes(target.id) || false;
                   return (
                     <div 
@@ -256,36 +256,39 @@ export const ScavengerHuntLobby: React.FC = () => {
                       onClick={() => toggleFound(target.id)}
                       className={`relative flex flex-col items-center justify-center p-3 rounded-xl border-2 transition-all duration-300 cursor-pointer ${
                         isFound 
-                          ? 'bg-gray-800 border-purple-500 shadow-[0_0_15px_rgba(168,85,247,0.3)]' 
-                          : 'bg-gray-900 border-gray-800 hover:border-gray-700'
+                          ? 'bg-gray-900 border-purple-500 shadow-[0_0_15px_rgba(168,85,247,0.2)]' 
+                          : 'bg-gray-800 border-gray-700 hover:border-gray-500'
                       }`}
                     >
-                      {/* Retro Pixel Sprite - Using Pokédex ID. Fallback to ID 0 if undefined */}
+                      {/* Retro Pixel Sprite - Fallback to Pokéball if Dex ID is missing */}
                       <img 
-                        src={`https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/versions/generation-i/red-blue/transparent/${target.pokedexId || index + 1}.png`}
+                        src={target.pokedexId 
+                          ? `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/versions/generation-i/red-blue/transparent/${target.pokedexId}.png`
+                          : `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/items/poke-ball.png`
+                        }
                         alt={target.name}
-                        className={`w-16 h-16 drop-shadow-lg transition-all duration-300 ${
-                          isFound ? 'opacity-100 scale-110' : 'opacity-40 grayscale brightness-0'
+                        className={`w-24 h-24 drop-shadow-lg transition-all duration-300 ${
+                          isFound ? 'opacity-30 scale-95' : 'opacity-100 scale-100'
                         }`}
                         style={{ imageRendering: 'pixelated' }}
                       />
                       
-                      {/* Dex Number & Name */}
+                      {/* Dex Number & Name (Always Visible) */}
                       <div className="mt-2 flex flex-col items-center w-full">
-                        <span className="text-[9px] text-gray-500 font-mono tracking-widest">
-                          #{String(target.pokedexId || index + 1).padStart(3, '0')}
+                        <span className="text-[10px] text-gray-500 font-mono tracking-widest">
+                          {target.pokedexId ? `#${String(target.pokedexId).padStart(3, '0')}` : '???'}
                         </span>
-                        <span className={`text-[11px] font-black uppercase tracking-wider truncate w-full text-center ${
-                          isFound ? 'text-white' : 'text-gray-600'
+                        <span className={`text-xs font-black uppercase tracking-wider truncate w-full text-center mt-0.5 ${
+                          isFound ? 'text-purple-400 line-through' : 'text-white'
                         }`}>
-                          {isFound ? target.name : '???'}
+                          {target.name}
                         </span>
                       </div>
 
                       {/* Found Badge */}
                       {isFound && (
-                        <div className="absolute -top-2 -right-2 bg-purple-500 text-white rounded-full p-0.5 border-2 border-gray-950">
-                          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round">
+                        <div className="absolute -top-2 -right-2 bg-purple-500 text-white rounded-full p-1 border-2 border-gray-950 shadow-lg">
+                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round">
                             <polyline points="20 6 9 17 4 12"></polyline>
                           </svg>
                         </div>
