@@ -300,15 +300,9 @@ export const DistributorView: React.FC<DistributorProps> = ({ codes, onSessionCo
       setResolvingId(report.id);
       try {
         await runTransaction(db, async (transaction: any) => {
-             // Get one unused replacement code (Smart Split Logic)
+             // Get one unused replacement code (FIFO Order)
              const codesRef = collection(db, `sessions/${sessionId}/codes`);
-             let q;
-             const isRaffleWin = false; // DistributorView handles normal distribution (FIFO), not Raffle wins.
-             if (isRaffleWin) {
-                 q = query(codesRef, where("claimed", "==", false), limit(1));
-             } else {
-                 q = query(codesRef, where("claimed", "==", false), orderBy("dateAdded", "asc"), limit(1));
-             }
+             const q = query(codesRef, where("claimed", "==", false), orderBy("dateAdded", "asc"), limit(1));
              const codeSnap = await getDocs(q);
 
              if (codeSnap.empty) throw new Error("NO_CODES_LEFT");
