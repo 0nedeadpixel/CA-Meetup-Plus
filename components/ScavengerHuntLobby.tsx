@@ -263,12 +263,12 @@ export const ScavengerHuntLobby: React.FC = () => {
                       {/* Retro Pixel Sprite - Fallback to Pokéball if Dex ID is missing */}
                       <img 
                         src={target.pokedexId 
-                          ? `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/${target.pokedexId}.png`
+                          ? `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/versions/generation-i/red-blue/transparent/${target.pokedexId}.png`
                           : `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/items/poke-ball.png`
                         }
                         alt={target.name}
-                        className={`w-24 h-24 drop-shadow-lg transition-all duration-300 ${
-                          isFound ? 'opacity-30 scale-95' : 'opacity-100 scale-100'
+                        className={`w-24 h-24 shrink-0 object-contain drop-shadow-lg transition-all duration-300 ${
+                          isFound ? 'opacity-30 scale-125' : 'opacity-100 scale-150'
                         }`}
                         style={{ imageRendering: 'pixelated' }}
                       />
