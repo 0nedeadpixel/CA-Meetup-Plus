@@ -197,7 +197,7 @@ export const RedeemPage: React.FC = () => {
                     // 2. Fetch batch of codes (Smart Split Logic)
                     let q;
                     if (isRaffleWin) {
-                        // Raffle uses a randomized pool (prevents timestamp bugs)
+                        // Raffle uses a randomized pool because Ghost Sessions lack dateAdded timestamps
                         q = query(
                             collection(db, `sessions/${sessionId}/codes`), 
                             where("claimed", "==", false), 
