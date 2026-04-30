@@ -194,12 +194,24 @@ export const RedeemPage: React.FC = () => {
                     // 1. Jitter to prevent collision (increases with attempts)
                     await new Promise(resolve => setTimeout(resolve, Math.random() * (500 + attempt * 500)));
 
-                    // 2. Fetch batch of codes (Removed orderBy to prevent filtering codes missing timestamps)
-                    const q = query(
-                        collection(db, `sessions/${sessionId}/codes`), 
-                        where("claimed", "==", false), 
-                        limit(20)
-                    );
+                    // 2. Fetch batch of codes (Smart Split Logic)
+                    let q;
+                    if (isRaffleWin) {
+                        // Raffle uses a randomized pool (prevents timestamp bugs)
+                        q = query(
+                            collection(db, `sessions/${sessionId}/codes`), 
+                            where("claimed", "==", false), 
+                            limit(20)
+                        );
+                    } else {
+                        // Regular Code Distributor strictly enforces FIFO (Oldest first)
+                        q = query(
+                            collection(db, `sessions/${sessionId}/codes`), 
+                            where("claimed", "==", false), 
+                            orderBy("dateAdded", "asc"),
+                            limit(20)
+                        );
+                    }
                     const snapshot = await getDocs(q);
                     if (snapshot.empty) throw new Error("EMPTY_POOL");
 
