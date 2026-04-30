@@ -194,17 +194,15 @@ export const RedeemPage: React.FC = () => {
                     // 1. Jitter to prevent collision (increases with attempts)
                     await new Promise(resolve => setTimeout(resolve, Math.random() * (500 + attempt * 500)));
 
-                    // 2. Fetch batch of codes (Smart Split Logic)
+                    // 2. Fetch batch of codes (Smart Split Logic for FIFO)
                     let q;
                     if (isRaffleWin) {
-                        // Raffle uses a randomized pool because Ghost Sessions lack dateAdded timestamps
                         q = query(
                             collection(db, `sessions/${sessionId}/codes`), 
                             where("claimed", "==", false), 
                             limit(20)
                         );
                     } else {
-                        // Regular Code Distributor strictly enforces FIFO (Oldest first)
                         q = query(
                             collection(db, `sessions/${sessionId}/codes`), 
                             where("claimed", "==", false), 
