@@ -470,7 +470,7 @@ export const ScavengerHuntView: React.FC<ScavengerHuntViewProps> = ({ settings }
             <div className="border-t border-gray-800 pt-6">
                 <div className="flex justify-between items-center mb-4">
                     <h3 className="font-bold text-gray-400 uppercase text-xs">Hunt Targets</h3>
-                    <Button variant="secondary" onClick={() => setTargets([...targets, { id: uuidv4(), name: '', pokedexId: undefined }])} className="text-xs py-1 h-8 px-3">
+                    <Button variant="secondary" onClick={() => setTargets([...targets, { id: uuidv4(), name: '', pokedexId: null }])} className="text-xs py-1 h-8 px-3">
                         <Plus size={14} className="mr-1" /> Add Target
                     </Button>
                 </div>

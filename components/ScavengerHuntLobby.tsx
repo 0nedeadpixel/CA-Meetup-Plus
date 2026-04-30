@@ -78,11 +78,14 @@ export const ScavengerHuntLobby: React.FC = () => {
           let assignedTargets: any[] = [];
           
           if (targetsList.length > 0) {
-              assignedTargets = targetsList.sort(() => 0.5 - Math.random()).slice(0, 5);
+              assignedTargets = targetsList.sort(() => 0.5 - Math.random()).slice(0, 5).map(t => ({
+                  ...t,
+                  pokedexId: t.pokedexId || null // Sanitize undefined to null
+              }));
               assignedPokemon = assignedTargets.map(t => t.name);
           } else if (pool.length > 0) {
               assignedPokemon = pool.sort(() => 0.5 - Math.random()).slice(0, 5);
-              assignedTargets = assignedPokemon.map(p => ({ id: uuidv4(), name: p, pokedexId: undefined }));
+              assignedTargets = assignedPokemon.map(p => ({ id: uuidv4(), name: p, pokedexId: null })); // Use null, not undefined
           }
 
           const newParticipant: ScavengerParticipant = {

@@ -137,7 +137,7 @@ export interface RaffleParticipant {
 export interface ScavengerTarget {
   id: string;
   name: string;
-  pokedexId?: number;
+  pokedexId?: number | null;
 }
 
 export interface ScavengerParticipant {
