@@ -134,13 +134,21 @@ export interface RaffleParticipant {
   optedOutPrizeIds?: string[];
 }
 
+export interface ScavengerTarget {
+  id: string;
+  name: string;
+  pokedexId?: number;
+}
+
 export interface ScavengerParticipant {
     id: string;
     deviceId: string;
     name: string;
     ign: string;
     joinedAt: number;
-    assignedPokemon: string[];
+    assignedPokemon: string[]; // Legacy
+    assignedTargets?: ScavengerTarget[];
+    foundTargetIds?: string[];
     isVerified: boolean;
 }
 
@@ -151,9 +159,11 @@ export interface ScavengerHunt {
   active: boolean;
   createdAt: number;
   gameMode?: 'sequential' | 'free_roam';
-  pokemonPool: string[];
+  pokemonPool: string[]; // Legacy
+  targets?: ScavengerTarget[];
   ambassador?: AmbassadorSettings;
-  hostUid?: string;
+  hostUid?: string | null;
+  hostDevice?: string;
 }
 
 export interface TriviaQuestion {

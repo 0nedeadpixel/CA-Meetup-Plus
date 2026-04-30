@@ -9,7 +9,7 @@ import { auth, db } from '../firebase';
 import { onAuthStateChanged } from 'firebase/auth';
 // @ts-ignore
 import { doc, getDoc, collection, addDoc, updateDoc, deleteDoc, onSnapshot, serverTimestamp, query, orderBy, setDoc } from 'firebase/firestore';
-import { ScavengerHunt, ScavengerParticipant, AppSettings } from '../types';
+import { ScavengerHunt, ScavengerParticipant, AppSettings, ScavengerTarget } from '../types';
 import { v4 as uuidv4 } from 'uuid';
 import { QRCodeSVG } from 'qrcode.react';
 import { ConfirmationModal } from './ConfirmationModal';
@@ -76,8 +76,9 @@ export const ScavengerHuntView: React.FC<ScavengerHuntViewProps> = ({ settings }
   const [huntDesc, setHuntDesc] = useState('');
   const [huntMode, setHuntMode] = useState<'sequential' | 'free_roam'>('sequential');
   
-  // Pokemon Pool
+  // Pokemon Pool & Targets
   const [pokemonPoolText, setPokemonPoolText] = useState('');
+  const [targets, setTargets] = useState<ScavengerTarget[]>([]);
 
   // UI State
   const [linkCopied, setLinkCopied] = useState(false);
@@ -206,6 +207,7 @@ export const ScavengerHuntView: React.FC<ScavengerHuntViewProps> = ({ settings }
           createdAt: Date.now(),
           gameMode: 'sequential',
           pokemonPool: [],
+          targets: [],
           ambassador: settings.ambassador,
           hostUid: currentUser ? currentUser.uid : null,
           hostDevice: myDeviceId
@@ -216,6 +218,7 @@ export const ScavengerHuntView: React.FC<ScavengerHuntViewProps> = ({ settings }
       setHuntDesc('');
       setHuntMode('sequential');
       setPokemonPoolText('');
+      setTargets([]);
       setViewState('EDIT_HUNT');
   };
 
@@ -225,6 +228,7 @@ export const ScavengerHuntView: React.FC<ScavengerHuntViewProps> = ({ settings }
       setHuntDesc(hunt.description);
       setHuntMode(hunt.gameMode || 'sequential');
       setPokemonPoolText(hunt.pokemonPool?.join(', ') || '');
+      setTargets(hunt.targets || []);
       setViewState('EDIT_HUNT');
   };
 
@@ -238,6 +242,7 @@ export const ScavengerHuntView: React.FC<ScavengerHuntViewProps> = ({ settings }
           description: huntDesc,
           gameMode: huntMode,
           pokemonPool: pokemonPoolText.split(',').map(p => p.trim()).filter(p => p !== ''),
+          targets: targets,
           ambassador: settings.ambassador // Update profile if changed
       };
 
@@ -294,10 +299,10 @@ export const ScavengerHuntView: React.FC<ScavengerHuntViewProps> = ({ settings }
                             <div className="bg-gray-950 border border-gray-800 p-4 rounded mb-6 text-left max-h-[200px] overflow-y-auto">
                                 <h4 className="text-xs uppercase text-gray-500 font-bold mb-2">Their Catch-List</h4>
                                 <ul className="list-disc pl-4 space-y-1">
-                                    {verificationParticipant.assignedPokemon?.map((poke, i) => (
+                                    {(verificationParticipant.assignedTargets?.map(t => t.name) || verificationParticipant.assignedPokemon)?.map((poke, i) => (
                                         <li key={i} className="text-sm text-green-400">{poke}</li>
                                     ))}
-                                    {(!verificationParticipant.assignedPokemon || verificationParticipant.assignedPokemon.length === 0) && (
+                                    {(!verificationParticipant.assignedTargets?.length && (!verificationParticipant.assignedPokemon || verificationParticipant.assignedPokemon.length === 0)) && (
                                         <li className="text-sm text-gray-500">None</li>
                                     )}
                                 </ul>
@@ -369,10 +374,10 @@ export const ScavengerHuntView: React.FC<ScavengerHuntViewProps> = ({ settings }
                             <div className="bg-gray-950 border border-gray-800 p-4 rounded mb-6 text-left max-h-[200px] overflow-y-auto">
                                 <h4 className="text-xs uppercase text-gray-500 font-bold mb-2">Their Catch-List</h4>
                                 <ul className="list-disc pl-4 space-y-1">
-                                    {verificationParticipant.assignedPokemon?.map((poke, i) => (
+                                    {(verificationParticipant.assignedTargets?.map(t => t.name) || verificationParticipant.assignedPokemon)?.map((poke, i) => (
                                         <li key={i} className="text-sm text-green-400">{poke}</li>
                                     ))}
-                                    {(!verificationParticipant.assignedPokemon || verificationParticipant.assignedPokemon.length === 0) && (
+                                    {(!verificationParticipant.assignedTargets?.length && (!verificationParticipant.assignedPokemon || verificationParticipant.assignedPokemon.length === 0)) && (
                                         <li className="text-sm text-gray-500">None</li>
                                     )}
                                 </ul>
@@ -426,7 +431,7 @@ export const ScavengerHuntView: React.FC<ScavengerHuntViewProps> = ({ settings }
                                         <span className={`text-xs ${p.isVerified ? 'text-green-400' : 'text-gray-400'}`}>{p.isVerified ? 'Verified' : 'Pending'}</span>
                                     </div>
                                     <div className="text-xs text-gray-500 truncate max-w-[200px]">
-                                        {p.assignedPokemon?.join(', ') || 'None'}
+                                        {p.assignedTargets?.map(t => t.name).join(', ') || p.assignedPokemon?.join(', ') || 'None'}
                                     </div>
                                 </div>
                                 {!p.isVerified && (
@@ -464,7 +469,57 @@ export const ScavengerHuntView: React.FC<ScavengerHuntViewProps> = ({ settings }
 
             <div className="border-t border-gray-800 pt-6">
                 <div className="flex justify-between items-center mb-4">
-                    <h3 className="font-bold text-gray-400 uppercase text-xs">Pokémon Pool</h3>
+                    <h3 className="font-bold text-gray-400 uppercase text-xs">Hunt Targets</h3>
+                    <Button variant="secondary" onClick={() => setTargets([...targets, { id: uuidv4(), name: '', pokedexId: undefined }])} className="text-xs py-1 h-8 px-3">
+                        <Plus size={14} className="mr-1" /> Add Target
+                    </Button>
+                </div>
+                
+                <div className="space-y-3">
+                    <p className="text-xs text-gray-500 mb-2">Add Pokémon targets and their corresponding Pokédex IDs below.</p>
+                    {targets.map((target, idx) => (
+                        <div key={target.id} className="flex items-center gap-2 bg-gray-900 border border-gray-800 p-2 rounded">
+                            <input
+                                type="text"
+                                className="flex-1 bg-transparent border-none outline-none text-sm text-white px-2"
+                                placeholder="Pokémon Name"
+                                value={target.name}
+                                onChange={e => {
+                                    const newTargets = [...targets];
+                                    newTargets[idx].name = e.target.value;
+                                    setTargets(newTargets);
+                                }}
+                            />
+                            <input
+                                type="number"
+                                className="w-24 bg-gray-950 border border-gray-800 outline-none text-sm text-white px-2 py-1 rounded focus:border-green-500"
+                                placeholder="Dex #"
+                                value={target.pokedexId || ''}
+                                onChange={e => {
+                                    const newTargets = [...targets];
+                                    newTargets[idx].pokedexId = e.target.value ? parseInt(e.target.value) : undefined;
+                                    setTargets(newTargets);
+                                }}
+                            />
+                            <button
+                                onClick={() => {
+                                    setTargets(targets.filter(t => t.id !== target.id));
+                                }}
+                                className="p-1.5 text-gray-500 hover:text-red-400 rounded-full"
+                            >
+                                <Trash2 size={16} />
+                            </button>
+                        </div>
+                    ))}
+                    {targets.length === 0 && (
+                        <div className="text-center text-gray-600 text-sm py-4 border border-dashed border-gray-800 rounded">
+                            No targets added. Use the button above to start.
+                        </div>
+                    )}
+                </div>
+
+                <div className="mt-6 mb-4">
+                    <h3 className="font-bold text-gray-400 uppercase text-xs">Legacy Pokémon Pool (Fallback)</h3>
                 </div>
                 
                 <div className="space-y-2">

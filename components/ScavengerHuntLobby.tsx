@@ -72,17 +72,28 @@ export const ScavengerHuntLobby: React.FC = () => {
       try {
           const pid = getDeviceId();
           let pool = [...(hunt.pokemonPool || [])];
+          let targetsList = [...(hunt.targets || [])];
           
-          // Randomly shuffle and take up to 5
-          pool = pool.sort(() => 0.5 - Math.random()).slice(0, 5);
+          let assignedPokemon: string[] = [];
+          let assignedTargets: any[] = [];
           
+          if (targetsList.length > 0) {
+              assignedTargets = targetsList.sort(() => 0.5 - Math.random()).slice(0, 5);
+              assignedPokemon = assignedTargets.map(t => t.name);
+          } else if (pool.length > 0) {
+              assignedPokemon = pool.sort(() => 0.5 - Math.random()).slice(0, 5);
+              assignedTargets = assignedPokemon.map(p => ({ id: uuidv4(), name: p, pokedexId: undefined }));
+          }
+
           const newParticipant: ScavengerParticipant = {
               id: pid, 
               deviceId: pid,
               name: inputName.trim(), 
               ign: inputIgn.trim(), 
               joinedAt: Date.now(), 
-              assignedPokemon: pool,
+              assignedPokemon: assignedPokemon,
+              assignedTargets: assignedTargets,
+              foundTargetIds: [],
               isVerified: false
           };
           
@@ -93,6 +104,30 @@ export const ScavengerHuntLobby: React.FC = () => {
       } catch (e: any) {
           setError("Failed to register.");
       } finally { setRegistering(false); }
+  };
+
+  const toggleFound = async (targetId: string) => {
+      if (!participant || !huntId) return;
+      const currentFound = participant.foundTargetIds || [];
+      const isFound = currentFound.includes(targetId);
+      
+      const newFound = isFound 
+          ? currentFound.filter(id => id !== targetId)
+          : [...currentFound, targetId];
+          
+      // Optimistic update
+      setParticipant({ ...participant, foundTargetIds: newFound });
+      
+      // Save to Firebase
+      try {
+          await setDoc(doc(db, `scavenger_hunts/${huntId}/participants/${participant.id}`), {
+              foundTargetIds: newFound
+          }, { merge: true });
+      } catch (err) {
+          console.error('Failed to save found state', err);
+          setParticipant({ ...participant, foundTargetIds: currentFound }); // revert on error
+          addToast("Failed to update status", "error");
+      }
   };
 
   const handleSearchStringCopy = () => {
@@ -207,15 +242,58 @@ export const ScavengerHuntLobby: React.FC = () => {
             <h3 className="text-xl font-bold mb-2">Your Catch-List</h3>
             <p className="text-sm text-gray-400 mb-6">Catch all of the following Pokémon during the event. Use the search string below to filter your storage!</p>
 
-            <div className="bg-gray-950 border border-gray-800 p-4 rounded mb-6">
-                <h4 className="text-xs uppercase text-gray-500 font-bold mb-2">Assigned Pokémon</h4>
-                <div className="flex flex-wrap gap-2 mb-4">
-                    {participant.assignedPokemon?.map((poke, i) => (
-                        <span key={i} className="bg-gray-900 border border-gray-700 px-3 py-1 rounded text-sm text-white">{poke}</span>
-                    ))}
-                    {(!participant.assignedPokemon || participant.assignedPokemon.length === 0) && <span className="text-sm text-gray-500">No Pokémon assigned.</span>}
-                </div>
+            {/* Retro 3-Column Target Grid */}
+            <div className="w-full max-w-md mx-auto p-4">
+              <div className="grid grid-cols-3 gap-3">
+                {participant.assignedTargets?.map((target, index) => {
+                  const isFound = participant.foundTargetIds?.includes(target.id) || false;
+                  return (
+                    <div 
+                      key={target.id} 
+                      onClick={() => toggleFound(target.id)}
+                      className={`relative flex flex-col items-center justify-center p-3 rounded-xl border-2 transition-all duration-300 cursor-pointer ${
+                        isFound 
+                          ? 'bg-gray-800 border-purple-500 shadow-[0_0_15px_rgba(168,85,247,0.3)]' 
+                          : 'bg-gray-900 border-gray-800 hover:border-gray-700'
+                      }`}
+                    >
+                      {/* Retro Pixel Sprite - Using Pokédex ID. Fallback to ID 0 if undefined */}
+                      <img 
+                        src={`https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/versions/generation-i/red-blue/transparent/${target.pokedexId || index + 1}.png`}
+                        alt={target.name}
+                        className={`w-16 h-16 drop-shadow-lg transition-all duration-300 ${
+                          isFound ? 'opacity-100 scale-110' : 'opacity-40 grayscale brightness-0'
+                        }`}
+                        style={{ imageRendering: 'pixelated' }}
+                      />
+                      
+                      {/* Dex Number & Name */}
+                      <div className="mt-2 flex flex-col items-center w-full">
+                        <span className="text-[9px] text-gray-500 font-mono tracking-widest">
+                          #{String(target.pokedexId || index + 1).padStart(3, '0')}
+                        </span>
+                        <span className={`text-[11px] font-black uppercase tracking-wider truncate w-full text-center ${
+                          isFound ? 'text-white' : 'text-gray-600'
+                        }`}>
+                          {isFound ? target.name : '???'}
+                        </span>
+                      </div>
 
+                      {/* Found Badge */}
+                      {isFound && (
+                        <div className="absolute -top-2 -right-2 bg-purple-500 text-white rounded-full p-0.5 border-2 border-gray-950">
+                          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round">
+                            <polyline points="20 6 9 17 4 12"></polyline>
+                          </svg>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+
+            <div className="bg-gray-950 border border-gray-800 p-4 rounded mb-6 flex flex-col items-center mt-6">
                 <Button variant="secondary" onClick={handleSearchStringCopy} fullWidth className="text-sm border-gray-700 gap-2 h-10">
                     <Copy size={16} /> Copy Search String
                 </Button>
