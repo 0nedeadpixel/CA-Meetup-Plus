@@ -263,7 +263,7 @@ export const ScavengerHuntLobby: React.FC = () => {
                       {/* Retro Pixel Sprite - Fallback to Pokéball if Dex ID is missing */}
                       <img 
                         src={target.pokedexId 
-                          ? `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/versions/generation-i/red-blue/transparent/${target.pokedexId}.png`
+                          ? `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/${target.pokedexId}.png`
                           : `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/items/poke-ball.png`
                         }
                         alt={target.name}
