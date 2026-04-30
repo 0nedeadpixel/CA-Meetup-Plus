@@ -79,6 +79,8 @@ export const ScavengerHuntView: React.FC<ScavengerHuntViewProps> = ({ settings }
   // Pokemon Pool & Targets
   const [pokemonPoolText, setPokemonPoolText] = useState('');
   const [targets, setTargets] = useState<ScavengerTarget[]>([]);
+  const [quickAddIds, setQuickAddIds] = useState('');
+  const [isFetchingPokemon, setIsFetchingPokemon] = useState(false);
 
   // UI State
   const [linkCopied, setLinkCopied] = useState(false);
@@ -195,6 +197,52 @@ export const ScavengerHuntView: React.FC<ScavengerHuntViewProps> = ({ settings }
       } finally {
           setVerifying(false);
       }
+  };
+
+  const handleQuickAdd = async () => {
+      if (!quickAddIds.trim()) return;
+      setIsFetchingPokemon(true);
+      
+      // Parse comma-separated string into an array of valid numbers
+      const ids = quickAddIds.split(',')
+          .map(s => parseInt(s.trim()))
+          .filter(n => !isNaN(n) && n > 0 && n <= 1025); // Max current pokedex
+      
+      if (ids.length === 0) {
+          addToast("No valid Dex IDs found.", 'error');
+          setIsFetchingPokemon(false);
+          return;
+      }
+
+      const fetchedTargets: ScavengerTarget[] = [];
+      
+      for (const dexId of ids) {
+          try {
+              const res = await fetch(`https://pokeapi.co/api/v2/pokemon/${dexId}`);
+              if (res.ok) {
+                  const data = await res.json();
+                  // Capitalize first letter (e.g., 'bulbasaur' -> 'Bulbasaur')
+                  const capitalizedName = data.name.charAt(0).toUpperCase() + data.name.slice(1);
+                  fetchedTargets.push({
+                      id: uuidv4(),
+                      name: capitalizedName,
+                      pokedexId: dexId
+                  });
+              }
+          } catch (e) {
+              console.error(`Failed to fetch Pokemon #${dexId}`, e);
+          }
+      }
+
+      if (fetchedTargets.length > 0) {
+          setTargets(prev => [...prev, ...fetchedTargets]);
+          setQuickAddIds(''); // Clear the input after success
+          addToast(`Added ${fetchedTargets.length} Pokémon successfully!`, 'success');
+      } else {
+          addToast("Failed to fetch Pokémon data. Check your IDs.", 'error');
+      }
+      
+      setIsFetchingPokemon(false);
   };
 
   const handleCreateNew = () => {
@@ -477,6 +525,27 @@ export const ScavengerHuntView: React.FC<ScavengerHuntViewProps> = ({ settings }
                 
                 <div className="space-y-3">
                     <p className="text-xs text-gray-500 mb-2">Add Pokémon targets and their corresponding Pokédex IDs below.</p>
+                    
+                    {/* QUICK ADD BY DEX # */}
+                    <div className="flex items-center gap-2 mb-4 bg-gray-900 border border-gray-800 p-2 rounded">
+                        <input
+                            type="text"
+                            className="flex-1 bg-transparent border-none outline-none text-sm text-white px-2 placeholder-gray-600"
+                            placeholder="Quick Add Dex IDs (e.g., 1, 4, 7, 25)"
+                            value={quickAddIds}
+                            onChange={e => setQuickAddIds(e.target.value)}
+                            onKeyDown={e => e.key === 'Enter' && handleQuickAdd()}
+                        />
+                        <Button 
+                            variant="secondary" 
+                            onClick={handleQuickAdd} 
+                            disabled={isFetchingPokemon || !quickAddIds.trim()}
+                            className="h-8 text-xs bg-purple-900/30 text-purple-400 border-purple-500/50 hover:bg-purple-900/50"
+                        >
+                            {isFetchingPokemon ? 'Fetching...' : 'Quick Add'}
+                        </Button>
+                    </div>
+
                     {targets.map((target, idx) => (
                         <div key={target.id} className="flex items-center gap-2 bg-gray-900 border border-gray-800 p-2 rounded">
                             <input
@@ -497,7 +566,7 @@ export const ScavengerHuntView: React.FC<ScavengerHuntViewProps> = ({ settings }
                                 value={target.pokedexId || ''}
                                 onChange={e => {
                                     const newTargets = [...targets];
-                                    newTargets[idx].pokedexId = e.target.value ? parseInt(e.target.value) : undefined;
+                                    newTargets[idx].pokedexId = e.target.value ? parseInt(e.target.value) : null;
                                     setTargets(newTargets);
                                 }}
                             />

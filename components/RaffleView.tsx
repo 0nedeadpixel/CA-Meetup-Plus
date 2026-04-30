@@ -87,6 +87,7 @@ export const RaffleView: React.FC<RaffleViewProps> = ({ settings, codes = [], on
   const [passwordInput, setPasswordInput] = useState('');
   const [authLoading, setAuthLoading] = useState(false);
   const [currentUser, setCurrentUser] = useState<any>(null);
+  const [authLoaded, setAuthLoaded] = useState(false);
   const [userRole, setUserRole] = useState<UserRole>('user');
   
   const [winnerHistory, setWinnerHistory] = useState<any[]>([]);
@@ -143,6 +144,7 @@ export const RaffleView: React.FC<RaffleViewProps> = ({ settings, codes = [], on
         } else {
             setUserRole('user');
         }
+        setAuthLoaded(true); // MUST ADD THIS
     });
     return () => unsubAuth();
   }, []);
@@ -217,9 +219,12 @@ export const RaffleView: React.FC<RaffleViewProps> = ({ settings, codes = [], on
   }, [sessionStep]); 
 
   useEffect(() => {
-      if (!sessionId) {
-          setSessionStep(0);
-          setRaffleName('');
+      // WAIT for auth and device ID to load before evaluating the padlock
+      if (!sessionId || !authLoaded || !myDeviceId) {
+          if (!sessionId) {
+              setSessionStep(0);
+              setRaffleName('');
+          }
           return;
       }
 
@@ -261,7 +266,7 @@ export const RaffleView: React.FC<RaffleViewProps> = ({ settings, codes = [], on
       });
 
       return () => { unsubSession(); unsubParts(); };
-  }, [sessionId]);
+  }, [sessionId, authLoaded, currentUser, myDeviceId]);
 
 
   // --- SESSION MANAGEMENT ---
@@ -965,7 +970,8 @@ export const RaffleView: React.FC<RaffleViewProps> = ({ settings, codes = [], on
               communityName: displayCommunity,
               winners: flatWinners,
               ts: data.createdAt?.seconds || 0,
-              winnerCount: flatWinners.length
+              winnerCount: flatWinners.length,
+              active: data.active // ADD THIS LINE
           });
       });
       historyData.sort((a,b) => b.ts - a.ts);
@@ -1270,7 +1276,15 @@ export const RaffleView: React.FC<RaffleViewProps> = ({ settings, codes = [], on
                                           </div>
                                       </div>
                                       {!isSelectionMode && (
-                                          <div className="flex gap-1">
+                                          <div className="flex gap-1 items-center">
+                                              {session.active && (
+                                                  <button onClick={(e) => { 
+                                                      e.stopPropagation(); 
+                                                      localStorage.setItem('pogo_raffle_active_session', session.sessionId);
+                                                      setSessionId(session.sessionId);
+                                                      setShowResultsModal(false);
+                                                  }} className="px-2 py-1 bg-green-900/30 text-green-400 border border-green-500/50 rounded text-[10px] uppercase font-bold hover:bg-green-600 hover:text-white transition-colors mr-2">Resume</button>
+                                              )}
                                               <button onClick={(e) => { e.stopPropagation(); handleViewParticipants(session.sessionId); }} className="p-2 text-gray-500 hover:text-white" title="Attendees"><Users size={16}/></button>
                                               <button onClick={(e) => { e.stopPropagation(); handleDeleteSession(session.sessionId); }} className="p-2 text-gray-500 hover:text-red-400" title="Delete"><Trash2 size={16}/></button>
                                           </div>
