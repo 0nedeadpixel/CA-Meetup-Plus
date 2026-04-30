@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from "react";
-import { X, Users, Shield, ShieldCheck, CheckCircle2, XCircle } from "lucide-react";
-import { collection, getDocs, doc, setDoc } from "firebase/firestore";
+import { X, Users, Shield, ShieldCheck, CheckCircle2, XCircle, Trash2 } from "lucide-react";
+import { collection, getDocs, doc, setDoc, deleteDoc } from "firebase/firestore";
 import { db } from "../firebase";
 import { motion, AnimatePresence } from "framer-motion";
 
@@ -98,6 +98,31 @@ export const AmbassadorDirectoryModal: React.FC<AmbassadorDirectoryModalProps> =
     }
   };
 
+  const removeDiscordUser = async (user: any) => {
+    if (!window.confirm(`Are you sure you want to remove ${user.discordUsername || 'this user'}?`)) return;
+    try {
+      if (user.id !== user.discordId) {
+        // They are an admin/ambassador with a linked discord in the "users" collection
+        await setDoc(doc(db, "users", user.id), {
+          discordId: null,
+          discordUsername: null,
+          discordAvatar: null
+        }, { merge: true });
+      }
+      
+      // Delete from ambassador_directory (wrap in try-catch in case it doesn't exist)
+      try {
+        await deleteDoc(doc(db, "ambassador_directory", user.discordId));
+      } catch (e) {
+        console.warn("User not in ambassador_directory collection", e);
+      }
+      
+      fetchUsers();
+    } catch (err) {
+      console.error("Failed to remove user", err);
+    }
+  };
+
   useEffect(() => {
     if (isOpen) {
       fetchUsers();
@@ -184,12 +209,19 @@ export const AmbassadorDirectoryModal: React.FC<AmbassadorDirectoryModalProps> =
                     </div>
                   </div>
 
-                  <div className="flex items-center shrink-0">
+                  <div className="flex items-center shrink-0 gap-2">
                     <button 
                       onClick={() => toggleHostRole(user.discordId, user.role || 'user')}
                       className={`mt-2 px-3 py-1 text-xs font-bold rounded-full border transition-colors ${user.role === 'host' ? 'bg-purple-900/30 text-purple-400 border-purple-500/50 hover:bg-purple-900/50' : 'bg-gray-800 text-gray-400 border-gray-700 hover:text-white'}`}
                     >
                       {user.role === 'host' ? 'Revoke Host' : 'Make Host'}
+                    </button>
+                    <button
+                      onClick={() => removeDiscordUser(user)}
+                      className="mt-2 p-1.5 text-gray-500 hover:text-red-400 hover:bg-red-900/20 rounded-full transition-colors"
+                      title="Remove User"
+                    >
+                      <Trash2 size={16} />
                     </button>
                   </div>
                 </div>
