@@ -1,6 +1,6 @@
 
 import React, { useEffect, useState } from 'react';
-import { ArrowLeft, Map, Plus, Trash2, Edit2, Save, X, Navigation, LocateFixed, Eye, EyeOff, Lock, ChevronRight, GripVertical, QrCode, Share2, Copy, AlertTriangle, Users, Shuffle, ListOrdered, Search, User, Link as LinkIcon, Check, Play, CheckCircle } from 'lucide-react';
+import { ArrowLeft, Map, Plus, Trash2, Edit2, Save, X, Navigation, LocateFixed, Eye, EyeOff, Lock, ChevronRight, GripVertical, QrCode, Share2, Copy, AlertTriangle, Users, Shuffle, ListOrdered, Search, User, Link as LinkIcon, Check, Play, CheckCircle, ClipboardList } from 'lucide-react';
 // @ts-ignore
 import { useNavigate } from 'react-router-dom';
 import { Button } from './Button';
@@ -87,6 +87,7 @@ export const ScavengerHuntView: React.FC<ScavengerHuntViewProps> = ({ settings }
   const [showQrModal, setShowQrModal] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [itemToDelete, setItemToDelete] = useState<string | null>(null);
+  const [participantToKick, setParticipantToKick] = useState<string | null>(null);
 
   // Verification
   const [verificationParticipant, setVerificationParticipant] = useState<ScavengerParticipant | null>(null);
@@ -196,6 +197,17 @@ export const ScavengerHuntView: React.FC<ScavengerHuntViewProps> = ({ settings }
           addToast("Error verifying player", 'error');
       } finally {
           setVerifying(false);
+      }
+  };
+
+  const handleKickParticipant = async () => {
+      if (!participantToKick || !currentHunt) return;
+      try {
+          await deleteDoc(doc(db, `scavenger_hunts/${currentHunt.id}/participants`, participantToKick));
+          setParticipantToKick(null);
+          addToast("Player removed.", "success");
+      } catch(e) {
+          addToast("Error removing player.", "error");
       }
   };
 
@@ -409,6 +421,7 @@ export const ScavengerHuntView: React.FC<ScavengerHuntViewProps> = ({ settings }
       return (
         <div className="h-full w-full bg-gray-950 flex flex-col text-white relative">
             {/* VERIFICATION MODAL */}
+            <ConfirmationModal isOpen={!!participantToKick} onClose={() => setParticipantToKick(null)} onConfirm={handleKickParticipant} title="Remove User?" message="Remove this participant from the hunt?" confirmText="Remove" isDanger={true} />
             <AnimatePresence>
                 {verificationParticipant && (
                     <MotionDiv initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-50 bg-black/95 flex flex-col items-center justify-center p-6" onClick={() => setVerificationParticipant(null)}>
@@ -468,31 +481,45 @@ export const ScavengerHuntView: React.FC<ScavengerHuntViewProps> = ({ settings }
                     <span>Players ({participants.length})</span>
                     <span>Status</span>
                 </div>
-                <div className="space-y-2">
-                    {participants.map((p, index) => {
-                        return (
-                            <div key={p.id || index} className="bg-gray-900 border border-gray-800 p-3 flex items-center gap-3">
-                                <div className="w-8 h-8 rounded-full bg-gray-800 flex items-center justify-center text-gray-400"><User size={14}/></div>
-                                <div className="flex-1">
-                                    <div className="flex justify-between mb-1">
-                                        <span className="font-bold text-white">{p.ign}</span>
-                                        <span className={`text-xs ${p.isVerified ? 'text-green-400' : 'text-gray-400'}`}>{p.isVerified ? 'Verified' : 'Pending'}</span>
-                                    </div>
-                                    <div className="text-xs text-gray-500 truncate max-w-[200px]">
-                                        {p.assignedTargets?.map(t => t.name).join(', ') || p.assignedPokemon?.join(', ') || 'None'}
-                                    </div>
-                                </div>
-                                {!p.isVerified && (
-                                   <Button variant="secondary" onClick={() => {
-                                       setVerificationParticipant(p);
-                                       setVerificationHuntId(currentHunt.id);
-                                   }} className="h-8 px-3 text-xs bg-green-600/20 text-green-400 border-none hover:bg-green-600/40">Verify</Button>
-                                )}
+                            <div className="space-y-2">
+                                {participants.length === 0 && <div className="text-center text-gray-700 text-xs py-10 italic">Waiting for entries...</div>}
+                                {[...participants]
+                                    .sort((a, b) => {
+                                        const aFound = a.foundTargetIds?.length || 0;
+                                        const bFound = b.foundTargetIds?.length || 0;
+                                        if (bFound !== aFound) return bFound - aFound; // Sort by most found
+                                        return (a.joinedAt as any) - (b.joinedAt as any); // Tie-breaker by join time
+                                    })
+                                    .map((p, index) => {
+                                        const foundCount = p.foundTargetIds?.length || 0;
+                                        const totalCount = p.assignedTargets?.length || 5;
+                                        const isDone = foundCount > 0 && foundCount === totalCount;
+                                        
+                                        return (
+                                            <div key={p.id} className={`text-sm p-3 border flex justify-between items-center transition-all ${isDone ? 'bg-green-900/20 border-green-500/50 shadow-[0_0_10px_rgba(34,197,94,0.1)]' : 'bg-gray-950 border-gray-800'}`}>
+                                                <div className="flex items-center gap-3">
+                                                    <div className={`font-black w-6 text-center ${index < 3 ? 'text-yellow-500' : 'text-gray-600'}`}>#{index + 1}</div>
+                                                    <div className="flex flex-col">
+                                                        <div className="flex items-center gap-2">
+                                                            {(p as any).isManual ? <ClipboardList size={12} className="text-gray-500"/> : <Users size={12} className="text-blue-500"/>}
+                                                            <span className={`font-bold ${isDone ? 'text-green-400' : 'text-white'}`}>{p.ign}</span>
+                                                        </div>
+                                                        {(p as any).name && <span className="text-[10px] text-gray-500">{(p as any).name}</span>}
+                                                    </div>
+                                                </div>
+                                                <div className="flex items-center gap-4">
+                                                    <div className="flex flex-col items-end">
+                                                        <span className={`text-xs font-black tracking-widest ${isDone ? 'text-green-400' : 'text-purple-400'}`}>
+                                                            {foundCount} / {totalCount}
+                                                        </span>
+                                                        <span className="text-[9px] uppercase text-gray-500">{isDone ? 'Finished!' : 'Found'}</span>
+                                                    </div>
+                                                    <button onClick={() => setParticipantToKick(p.id!)} className="text-gray-700 hover:text-red-500 p-1"><X size={14}/></button>
+                                                </div>
+                                            </div>
+                                        );
+                                })}
                             </div>
-                        )
-                    })}
-                    {participants.length === 0 && <div className="text-center text-gray-600 py-10">No players have joined yet.</div>}
-                </div>
             </div>
         </div>
       )
