@@ -221,7 +221,7 @@ export const ScavengerHuntView: React.FC<ScavengerHuntViewProps> = ({ settings }
       if (completed.length === 0) { addToast("No pending players to verify.", "warning"); return; }
       
       setVerifying(true);
-      let raffleIdToAssign = null;
+      let raffleIdToAssign: string | null = null;
       try {
           const raffleQ = query(collection(db, 'raffle_sessions'), where('active', '==', true));
           const raffleSnap = await getDocs(raffleQ);
@@ -232,7 +232,8 @@ export const ScavengerHuntView: React.FC<ScavengerHuntViewProps> = ({ settings }
               if (activeRaffle) raffleIdToAssign = activeRaffle.id;
           }
 
-          for (const p of completed) {
+          // Process all verifications and raffle entries in parallel
+          await Promise.all(completed.map(async (p) => {
               let updateData: any = { isVerified: true, verifiedAt: Date.now() };
               if (raffleIdToAssign) {
                   updateData.raffleId = raffleIdToAssign;
@@ -241,7 +242,7 @@ export const ScavengerHuntView: React.FC<ScavengerHuntViewProps> = ({ settings }
                   });
               }
               await updateDoc(doc(db, `scavenger_hunts/${currentHunt!.id}/participants`, p.id), updateData);
-          }
+          }));
           addToast(`Successfully verified ${completed.length} players!`, "success");
       } catch (e) { addToast("Error during mass verification.", "error"); }
       finally { setVerifying(false); }

@@ -221,8 +221,12 @@ export const ScavengerHuntLobby: React.FC = () => {
   }
 
   // Separate Targets
-  const pokemonTargets = participant.assignedTargets?.filter(t => t.pokedexId) || [];
-  const customTasks = participant.assignedTargets?.filter(t => !t.pokedexId) || [];
+  // Safely fallback to legacy assignedPokemon array if assignedTargets doesn't exist
+  const safeTargets = participant.assignedTargets || 
+      (participant.assignedPokemon ? participant.assignedPokemon.map(p => ({ id: p, name: p, pokedexId: null })) : []);
+      
+  const pokemonTargets = safeTargets.filter(t => t.pokedexId);
+  const customTasks = safeTargets.filter(t => !t.pokedexId);
 
   // Generate Admin Verification QR Code Value
   let baseUrl = window.location.origin + window.location.pathname;
@@ -269,7 +273,7 @@ export const ScavengerHuntLobby: React.FC = () => {
                           const isFound = participant.foundTargetIds?.includes(target.id) || false;
                           return (
                               <div key={target.id} onClick={() => toggleFound(target.id)} className={`relative flex flex-col items-center justify-center p-3 rounded-xl border-2 transition-all duration-300 cursor-pointer ${isFound ? 'bg-gray-900 border-purple-500 shadow-[0_0_15px_rgba(168,85,247,0.2)]' : 'bg-gray-800 border-gray-700 hover:border-gray-500'}`}>
-                                  <img src={`https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/versions/generation-i/red-blue/transparent/${target.pokedexId}.png`} alt={target.name} className={`w-24 h-24 shrink-0 object-contain drop-shadow-lg transition-all duration-300 ${isFound ? 'opacity-30 scale-125' : 'opacity-100 scale-150'}`} style={{ imageRendering: 'pixelated' }} />
+                                  <img src={`https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/${target.pokedexId}.png`} alt={target.name} className={`w-24 h-24 shrink-0 object-contain drop-shadow-lg transition-all duration-300 ${isFound ? 'opacity-30 scale-125' : 'opacity-100 scale-150'}`} style={{ imageRendering: 'pixelated' }} />
                                   <div className="mt-2 flex flex-col items-center w-full">
                                       <span className="text-[10px] text-gray-500 font-mono tracking-widest">#{String(target.pokedexId).padStart(3, '0')}</span>
                                       <span className={`text-xs font-black uppercase tracking-wider truncate w-full text-center mt-0.5 ${isFound ? 'text-purple-400 line-through' : 'text-white'}`}>{target.name}</span>
