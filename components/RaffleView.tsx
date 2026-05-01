@@ -51,6 +51,7 @@ export const RaffleView: React.FC<RaffleViewProps> = ({ settings, codes = [], on
   const [prizes, setPrizes] = useState<RafflePrize[]>([]);
   const [participants, setParticipants] = useState<RaffleParticipant[]>([]);
   const [sessionStatus, setSessionStatus] = useState<'WAITING' | 'ROLLING' | 'WINNER_DECLARED'>('WAITING');
+  const [allowSharing, setAllowSharing] = useState(true);
   
   // UI STATE
   const [showQrModal, setShowQrModal] = useState(false);
@@ -251,6 +252,7 @@ export const RaffleView: React.FC<RaffleViewProps> = ({ settings, codes = [], on
               }
               if (data.prizes) setPrizes(data.prizes);
               if (data.status) setSessionStatus(data.status);
+              if (data.allowSharing !== undefined) setAllowSharing(data.allowSharing); else setAllowSharing(true);
               if (data.raffleName) setRaffleName(data.raffleName); 
               if (data.ghostSessionId) setGhostSessionId(data.ghostSessionId);
               if (data.linkedDistributorId) setLinkedDistributorId(data.linkedDistributorId);
@@ -286,6 +288,7 @@ export const RaffleView: React.FC<RaffleViewProps> = ({ settings, codes = [], on
           active: true,
           createdAt: serverTimestamp(),
           status: 'WAITING',
+          allowSharing: true,
           prizes: [],
           blockedDeviceIds: []
       });
@@ -295,6 +298,16 @@ export const RaffleView: React.FC<RaffleViewProps> = ({ settings, codes = [], on
       setRaffleName(newRaffleName.trim());
       setNewRaffleName('');
       setSessionStep(0);
+  };
+
+  const handleLeaveSession = () => {
+      localStorage.removeItem('pogo_raffle_active_session');
+      setSessionId(null);
+      setRaffleName('');
+      setSessionStep(0);
+      setPrizes([]);
+      setParticipants([]);
+      setGhostSessionId(null);
   };
 
   const handleEndSessionClick = () => {
@@ -1327,6 +1340,25 @@ export const RaffleView: React.FC<RaffleViewProps> = ({ settings, codes = [], on
                     <div className="flex gap-2 mb-4"><input type="text" value={newPresetInput} onChange={(e) => setNewPresetInput(e.target.value)} placeholder="New preset name..." className="flex-1 bg-gray-900 border border-gray-800 p-2 text-sm focus:border-purple-500 outline-none" /><Button variant="secondary" onClick={handleAddPreset} className="py-2 h-auto"><Plus size={18}/></Button></div>
                     <div className="flex flex-wrap gap-2">{presetPrizes.map((prize, idx) => (<div key={idx} className="bg-gray-900 border border-gray-800 px-3 py-1.5 rounded-full text-sm flex items-center gap-2">{prize}<button onClick={() => setPresetPrizes(presetPrizes.filter((_, i) => i !== idx))} className="text-gray-500 hover:text-red-400"><X size={14}/></button></div>))}</div>
                 </div>
+                <div className="border-t border-gray-800 pt-6 mb-2">
+                    <h3 className="text-sm text-gray-400 font-bold uppercase mb-4">Event Security</h3>
+                    <div className="flex items-center justify-between bg-gray-900 border border-gray-800 p-4 rounded-xl">
+                        <div>
+                            <div className="font-bold text-white">Allow Link Sharing</div>
+                            <div className="text-xs text-gray-500 max-w-[200px] mt-1">Players can see a "Share" button on their waiting screen to invite others.</div>
+                        </div>
+                        <button 
+                            onClick={async () => {
+                                const newVal = !allowSharing;
+                                setAllowSharing(newVal);
+                                if (sessionId) await updateDoc(doc(db, 'raffle_sessions', sessionId), { allowSharing: newVal });
+                            }}
+                            className={`w-12 h-6 rounded-full transition-colors relative shrink-0 ${allowSharing ? 'bg-purple-500' : 'bg-gray-700'}`}
+                        >
+                            <div className={`w-4 h-4 bg-white rounded-full absolute top-1 transition-transform ${allowSharing ? 'translate-x-7' : 'translate-x-1'}`} />
+                        </button>
+                    </div>
+                </div>
                 <div className="border-t border-gray-800 pt-6">
                     <button onClick={handleOpenAuthModal} className="w-full flex items-center justify-between p-4 bg-gray-900 border border-gray-800 hover:border-purple-600/50 transition-colors group">
                         <div className="flex items-center gap-3"><div className="p-2 bg-purple-900/20 text-purple-400 group-hover:text-purple-300"><History size={20} /></div><div className="text-left"><span className="font-bold text-white block">Winner Archives</span><span className="text-xs text-gray-500">View past winners from previous events</span></div></div><ChevronRight size={16} className="text-gray-600 group-hover:text-white" />
@@ -1399,7 +1431,11 @@ export const RaffleView: React.FC<RaffleViewProps> = ({ settings, codes = [], on
 
         <div className="p-4 border-b border-gray-800 flex items-center justify-between bg-gray-900 sticky top-0 z-30 shrink-0">
             <div className="flex items-center gap-4"><button onClick={() => navigate('/')} className="p-2 bg-gray-800 rounded-full text-gray-400 hover:text-white border border-gray-700"><ArrowLeft size={20}/></button><div className="flex flex-col select-none"><h2 className="text-xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-pink-400">{raffleName || 'Raffle Master'}</h2><span className="text-[10px] text-gray-500 font-mono">ID: {sessionId.slice(0,6)}</span></div></div>
-            <div className="flex gap-2"><button onClick={() => setViewState('SETTINGS')} className="p-2 bg-gray-800 rounded-full text-gray-400 hover:text-white border border-gray-700"><Settings size={20} /></button><Button variant="danger" onClick={handleEndSessionClick} className="h-9 text-xs px-3">End</Button></div>
+            <div className="flex gap-2">
+                <button onClick={() => setViewState('SETTINGS')} className="p-2 bg-gray-800 rounded-full text-gray-400 hover:text-white border border-gray-700"><Settings size={20} /></button>
+                <Button variant="secondary" onClick={handleLeaveSession} className="h-9 text-xs px-3 bg-gray-800 text-white border-gray-700 hover:bg-gray-700">Switch</Button>
+                <Button variant="danger" onClick={handleEndSessionClick} className="h-9 text-xs px-3">End</Button>
+            </div>
         </div>
         {renderProgressBar()}
 

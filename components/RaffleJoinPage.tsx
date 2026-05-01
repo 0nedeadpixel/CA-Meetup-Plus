@@ -52,6 +52,7 @@ export const RaffleJoinPage: React.FC = () => {
   const [sessionPrizes, setSessionPrizes] = useState<RafflePrize[]>([]);
   const [isShareModalOpen, setIsShareModalOpen] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
+  const [allowSharing, setAllowSharing] = useState(true);
   const [editName, setEditName] = useState('');
   const [editIgn, setEditIgn] = useState('');
   const [optedOutPrizeIds, setOptedOutPrizeIds] = useState<string[]>([]);
@@ -114,6 +115,7 @@ export const RaffleJoinPage: React.FC = () => {
         if (snap.exists()) {
             const data = snap.data() as any;
             if (data.prizes) setSessionPrizes(data.prizes);
+            if (data.allowSharing !== undefined) setAllowSharing(data.allowSharing); else setAllowSharing(true);
             if (data.ghostSessionId) setSessionGhostId(data.ghostSessionId);
             if (data.ambassador) {
                 setAmbassadorProfile(data.ambassador);
@@ -382,7 +384,7 @@ export const RaffleJoinPage: React.FC = () => {
                             <div className="flex justify-between text-sm mb-2 border-b border-gray-800 pb-2"><span className="text-gray-500">Name</span><span className="font-bold">{name}</span></div>
                             <div className="flex justify-between text-sm"><span className="text-gray-500">IGN</span><span className="font-bold text-purple-400">{ign}</span></div>
                         </div>
-                        <Button variant="secondary" onClick={() => setIsShareModalOpen(true)} className="mt-6 w-full flex items-center justify-center gap-2 bg-gray-800 hover:bg-gray-700 border-gray-700 text-gray-300 hover:text-white"><QrCode size={18} /> Share / Pass it On</Button>
+                        {allowSharing && (<Button variant="secondary" onClick={() => setIsShareModalOpen(true)} className="mt-6 w-full flex items-center justify-center gap-2 bg-gray-800 hover:bg-gray-700 border-gray-700 text-gray-300 hover:text-white"><QrCode size={18} /> Share / Pass it On</Button>)}
                     </div>
                 </div>
                 {renderFooter()}
