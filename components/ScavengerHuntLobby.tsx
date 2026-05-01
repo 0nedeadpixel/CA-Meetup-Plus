@@ -6,7 +6,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { doc, onSnapshot, setDoc } from 'firebase/firestore';
 import { db } from '../firebase';
 import { Button } from './Button';
-import { Loader2, Map as MapIcon, Gamepad2, User, ShieldCheck, Shield, Copy, Trophy, Home, Check, CheckCircle, ArrowRight } from 'lucide-react';
+import { Loader2, Map as MapIcon, Gamepad2, User, ShieldCheck, Shield, Copy, Trophy, Home, Check, CheckCircle, ArrowRight, Ticket } from 'lucide-react';
 import { ScavengerHunt, ScavengerParticipant } from '../types';
 import { v4 as uuidv4 } from 'uuid';
 import { QRCodeSVG } from 'qrcode.react';
@@ -250,20 +250,25 @@ export const ScavengerHuntLobby: React.FC = () => {
             <h3 className="text-xl font-bold mb-2">Your Catch-List</h3>
             <p className="text-sm text-gray-400 mb-6">Catch all of the following Pokémon during the event. Use the search string below to filter your storage!</p>
 
-            {/* Subtle Post-Verification State */}
-            {participant.isVerified && (
-                <div className="mb-6 flex flex-col items-center gap-3">
-                    <div className="bg-green-900/30 border border-green-500/50 text-green-400 px-4 py-2 rounded-full text-sm font-bold flex items-center gap-2 shadow-[0_0_10px_rgba(34,197,94,0.1)]">
-                        <CheckCircle size={16} /> Hunt Verified!
-                    </div>
-                    {(participant as any).raffleId && (
-                        <button 
-                            onClick={() => window.open(`/#/raffle/join/${(participant as any).raffleId}`, '_blank')} 
-                            className="text-purple-400 hover:text-purple-300 text-sm font-bold underline flex items-center gap-1 transition-colors"
-                        >
-                            Open Raffle Page <ArrowRight size={14} />
-                        </button>
-                    )}
+            {/* Watermarked Raffle Ticket Button */}
+            {participant.isVerified && (participant as any).raffleId && (
+                <div className="mb-6">
+                    <button 
+                        onClick={() => window.open(`/#/raffle/join/${(participant as any).raffleId}`, '_blank')} 
+                        className="relative overflow-hidden w-full h-24 bg-purple-900/20 border-2 border-purple-500/50 rounded-xl flex items-center justify-center cursor-pointer hover:bg-purple-900/40 hover:border-purple-400 transition-all shadow-[0_0_15px_rgba(168,85,247,0.15)] group"
+                    >
+                        {/* Giant Faded Watermark */}
+                        <Ticket className="absolute -right-4 -bottom-6 w-32 h-32 text-purple-500/10 group-hover:text-purple-500/20 transition-colors transform -rotate-12" strokeWidth={1.5} />
+                        
+                        {/* Foreground Content */}
+                        <div className="relative z-10 flex items-center gap-3">
+                            <Ticket size={24} className="text-purple-400 group-hover:text-purple-300 transition-colors animate-pulse-slow" />
+                            <span className="text-xl font-black uppercase tracking-widest text-purple-300 group-hover:text-white transition-colors">
+                                Claim Raffle Ticket
+                            </span>
+                            <ArrowRight size={20} className="text-purple-400 group-hover:text-white transition-colors" />
+                        </div>
+                    </button>
                 </div>
             )}
 
