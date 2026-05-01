@@ -221,7 +221,7 @@ export const ScavengerHuntLobby: React.FC = () => {
   }
 
   // Separate Targets
-  // Safely fallback to legacy assignedPokemon array if assignedTargets doesn't exist
+  // Safely fallback to legacy assignedPokemon array using the string name as a static ID
   const safeTargets = participant.assignedTargets || 
       (participant.assignedPokemon ? participant.assignedPokemon.map(p => ({ id: p, name: p, pokedexId: null })) : []);
       

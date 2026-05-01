@@ -215,7 +215,7 @@ export const ScavengerHuntView: React.FC<ScavengerHuntViewProps> = ({ settings }
   const handleMassVerify = async () => {
       const completed = participants.filter(p => {
           const foundCount = p.foundTargetIds?.length || 0;
-          const totalCount = p.assignedTargets?.length || 5;
+          const totalCount = p.assignedTargets?.length || (p as any).assignedPokemon?.length || 5;
           return foundCount > 0 && foundCount === totalCount && !p.isVerified;
       });
       if (completed.length === 0) { addToast("No pending players to verify.", "warning"); return; }
@@ -555,7 +555,7 @@ export const ScavengerHuntView: React.FC<ScavengerHuntViewProps> = ({ settings }
                                     })
                                     .map((p, index) => {
                                         const foundCount = p.foundTargetIds?.length || 0;
-                                        const totalCount = p.assignedTargets?.length || 5;
+                                        const totalCount = p.assignedTargets?.length || (p as any).assignedPokemon?.length || 5;
                                         const isDone = foundCount > 0 && foundCount === totalCount;
                                         
                                         return (
