@@ -16,6 +16,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { RafflePrize, RaffleParticipant, AppSettings, RaffleWinner, UserRole, SessionData, CodeItem, RaffleSession } from '../types';
 import { ConfirmationModal } from './ConfirmationModal';
 import { useToast } from './ToastContext';
+import { useDiscordAuth } from './useDiscordAuth';
 
 // Fix for framer-motion type mismatch
 const MotionDiv = motion.div as any;
@@ -32,6 +33,7 @@ export const RaffleView: React.FC<RaffleViewProps> = ({ settings, codes = [], on
   const navigate = useNavigate();
   const { addToast } = useToast();
   const scrollRef = useRef<HTMLDivElement>(null);
+  const { user: discordUser } = useDiscordAuth();
   
   // IDENTITY STATE
   const [myDeviceId, setMyDeviceId] = useState<string>('');
@@ -150,15 +152,12 @@ export const RaffleView: React.FC<RaffleViewProps> = ({ settings, codes = [], on
     return () => unsubAuth();
   }, []);
 
-  // --- ADOPTION LOGIC (Mirroring Trivia Master) ---
+  // --- ADOPTION LOGIC ---
+  // 1. ACTIVE SESSION PROTECTION
   useEffect(() => {
       if (!myDeviceId && !currentUser) return;
 
-      const adoptRaffles = async () => {
-          const batch = writeBatch(db);
-          let count = 0;
-
-          // 1. ACTIVE SESSION PROTECTION
+      const protectActiveSession = async () => {
           if (sessionId) {
               const ref = doc(db, 'raffle_sessions', sessionId);
               const snap = await getDoc(ref);
@@ -167,13 +166,20 @@ export const RaffleView: React.FC<RaffleViewProps> = ({ settings, codes = [], on
                   if (!data.hostUid || data.hostDevice === 'host') {
                       const updates: any = { hostDevice: myDeviceId };
                       if (currentUser) updates.hostUid = currentUser.uid;
-                      batch.update(ref, updates);
-                      count++;
+                      await updateDoc(ref, updates);
                   }
               }
           }
+      };
 
-          // 2. ORPHAN ADOPTION (Cloud Link)
+      protectActiveSession();
+  }, [currentUser, myDeviceId, settings?.testMode, discordUser]);
+
+  // 2. ORPHAN ADOPTION (Cloud Link)
+  useEffect(() => {
+      if (!myDeviceId && !currentUser) return;
+
+      const adoptOrphans = async () => {
           if (currentUser) {
               const q = query(
                   collection(db, 'raffle_sessions'),
@@ -181,22 +187,26 @@ export const RaffleView: React.FC<RaffleViewProps> = ({ settings, codes = [], on
                   where('hostUid', '==', null)
               );
               const snap = await getDocs(q);
-              snap.forEach(docSnap => {
-                  if (!docSnap.data().hostUid) {
-                      batch.update(docSnap.ref, { hostUid: currentUser.uid });
-                      count++;
+              
+              if (!snap.empty) {
+                  const batch = writeBatch(db);
+                  let count = 0;
+                  snap.forEach(docSnap => {
+                      if (!docSnap.data().hostUid) {
+                          batch.update(docSnap.ref, { hostUid: currentUser.uid });
+                          count++;
+                      }
+                  });
+                  if (count > 0) {
+                      console.log(`Raffle Alignment: Linked ${count} sessions`);
+                      await batch.commit();
                   }
-              });
-          }
-
-          if (count > 0) {
-              console.log(`Raffle Alignment: Linked ${count} sessions to ${currentUser ? currentUser.email : 'Device ' + myDeviceId}`);
-              await batch.commit();
+              }
           }
       };
 
-      adoptRaffles();
-  }, [currentUser, myDeviceId, sessionId]);
+      adoptOrphans();
+  }, [currentUser, myDeviceId, discordUser]);
 
   useEffect(() => {
     try {
@@ -234,9 +244,9 @@ export const RaffleView: React.FC<RaffleViewProps> = ({ settings, codes = [], on
               const data = docSnap.data() as any;
               
               // STRICT PADLOCK: You can ONLY access a live raffle if you created it.
-              const isOwner = data.hostUid 
-                  ? currentUser && data.hostUid === currentUser.uid
-                  : data.hostDevice === myDeviceId;
+              const isOwner = (data.hostUid && currentUser && data.hostUid === currentUser.uid) ||
+                              (data.discordUid && discordUser && data.discordUid === discordUser.id) ||
+                              (data.hostDevice === myDeviceId);
 
               if (!isOwner) {
                   addToast("Unauthorized: You cannot access another Host's active raffle.", 'error');
@@ -268,7 +278,7 @@ export const RaffleView: React.FC<RaffleViewProps> = ({ settings, codes = [], on
       });
 
       return () => { unsubSession(); unsubParts(); };
-  }, [sessionId, authLoaded, currentUser, myDeviceId]);
+  }, [sessionId, authLoaded, currentUser, myDeviceId, discordUser]);
 
 
   // --- SESSION MANAGEMENT ---
@@ -282,6 +292,7 @@ export const RaffleView: React.FC<RaffleViewProps> = ({ settings, codes = [], on
           id,
           hostDevice: myDeviceId,
           hostUid: currentUser ? currentUser.uid : null, // CLOUD LINK
+          discordUid: discordUser ? discordUser.id : null,
           communityName,
           ambassador: settings?.ambassador || null,
           raffleName: newRaffleName.trim(), 
