@@ -463,7 +463,7 @@ export const ScavengerHuntView: React.FC<ScavengerHuntViewProps> = ({ settings }
                             <div>
                                 <h3 className="text-lg font-bold text-white">{hunt.title || 'Untitled Hunt'}</h3>
                                 <div className="text-xs text-gray-500 flex items-center gap-2">
-                                    <Map size={12}/> {hunt.pokemonPool?.length || 0} Pokémon listed
+                                    <Map size={12}/> {hunt.scavengerLayers ? hunt.scavengerLayers.reduce((acc: number, layer: any) => acc + (layer.targets?.length || 0), 0) : (hunt.pokemonPool?.length || 0)} Pokémon listed
                                 </div>
                             </div>
                             <div className="flex gap-2">

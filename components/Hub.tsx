@@ -442,7 +442,7 @@ export const Hub: React.FC<HubProps> = ({
     {
       id: "scavenger",
       title: "Scavenger Hunt",
-      desc: "Create GPS-based checkpoints.",
+      desc: "Build custom Pokémon catch-lists.",
       icon: (
         <Map
           size={32}
