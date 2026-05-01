@@ -112,7 +112,7 @@ export const ScavengerHuntView: React.FC<ScavengerHuntViewProps> = ({ settings }
           setHunts(list);
       });
       return () => unsub();
-  }, [currentUser, userRole, myDeviceId]);
+  }, [currentUser, userRole, myDeviceId, discordUser]);
 
   // 2. Fetch Participants (If Monitoring)
   useEffect(() => {
@@ -175,7 +175,7 @@ export const ScavengerHuntView: React.FC<ScavengerHuntViewProps> = ({ settings }
               checkVerification();
           }
       }
-  }, [currentUser, addToast]);
+  }, [currentUser, addToast, discordUser, myDeviceId]);
 
   // --- ACTIONS ---
 
