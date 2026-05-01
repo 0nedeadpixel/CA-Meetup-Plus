@@ -8,7 +8,7 @@ import { auth, db } from '../firebase';
 // @ts-ignore
 import { onAuthStateChanged } from 'firebase/auth';
 // @ts-ignore
-import { doc, getDoc, getDocs, where, collection, addDoc, updateDoc, deleteDoc, onSnapshot, serverTimestamp, query, orderBy, setDoc } from 'firebase/firestore';
+import { doc, getDoc, getDocs, where, collection, addDoc, updateDoc, deleteDoc, onSnapshot, serverTimestamp, query, orderBy, setDoc, deleteField } from 'firebase/firestore';
 import { ScavengerHunt, ScavengerParticipant, AppSettings, ScavengerTarget, ScavengerLayer } from '../types';
 import { v4 as uuidv4 } from 'uuid';
 import { QRCodeSVG } from 'qrcode.react';
@@ -252,6 +252,31 @@ export const ScavengerHuntView: React.FC<ScavengerHuntViewProps> = ({ settings }
           addToast(`Successfully verified ${completed.length} players!`, "success");
       } catch (e) { addToast("Error during mass verification.", "error"); }
       finally { setVerifying(false); }
+  };
+
+  const handleUnverify = async (p: any) => {
+      if (!currentHunt) return;
+      setVerifying(true);
+      try {
+          // If they were added to a raffle, silently remove them so they don't get duplicate entries
+          if (p.raffleId) {
+              await deleteDoc(doc(db, `raffle_sessions/${p.raffleId}/participants`, p.id));
+          }
+          
+          // Revert their Scavenger Hunt status
+          await updateDoc(doc(db, `scavenger_hunts/${currentHunt.id}/participants`, p.id), {
+              isVerified: false,
+              verifiedAt: deleteField(),
+              raffleId: deleteField()
+          });
+          
+          addToast("Player un-verified.", "info");
+      } catch (e) {
+          console.error(e);
+          addToast("Error un-verifying player.", "error");
+      } finally {
+          setVerifying(false);
+      }
   };
 
   const handleKickParticipant = async () => {
@@ -586,6 +611,9 @@ export const ScavengerHuntView: React.FC<ScavengerHuntViewProps> = ({ settings }
                                                     </div>
                                                     {isDone && !p.isVerified && (
                                                         <button onClick={() => { setVerificationParticipant(p); setVerificationHuntId(currentHunt.id); }} className="px-2 py-1 bg-green-600 text-white rounded text-[10px] font-bold uppercase hover:bg-green-500">Verify</button>
+                                                    )}
+                                                    {p.isVerified && (
+                                                        <button onClick={() => handleUnverify(p)} className="px-2 py-1 bg-gray-800 text-gray-400 border border-gray-700 rounded text-[10px] font-bold uppercase hover:bg-gray-700 hover:text-white transition-colors">Undo</button>
                                                     )}
                                                     <button onClick={() => setParticipantToKick(p.id!)} className="text-gray-700 hover:text-red-500 p-1"><X size={14}/></button>
                                                 </div>
