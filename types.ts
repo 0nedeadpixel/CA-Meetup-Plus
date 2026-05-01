@@ -159,6 +159,8 @@ export interface ScavengerParticipant {
     assignedTargets?: ScavengerTarget[];
     foundTargetIds?: string[];
     isVerified: boolean;
+    verifiedAt?: number;
+    raffleId?: string;
 }
 
 export interface ScavengerHunt {

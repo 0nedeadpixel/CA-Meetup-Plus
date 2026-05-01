@@ -181,61 +181,70 @@ export const ScavengerHuntView: React.FC<ScavengerHuntViewProps> = ({ settings }
   const handleVerifyComplete = async () => {
       if (!verificationParticipant || !verificationHuntId) return;
       setVerifying(true);
+      let updateData: any = { isVerified: true, verifiedAt: Date.now() };
       try {
-          // 1. Mark as verified with a strict timestamp
-          await updateDoc(doc(db, `scavenger_hunts/${verificationHuntId}/participants`, verificationParticipant.id), {
-              isVerified: true,
-              verifiedAt: Date.now() // Critical for sorting
-          });
-          
-          // 2. Auto-Raffle Entry Logic
-          try {
-              const raffleQ = query(collection(db, 'raffle_sessions'), where('active', '==', true));
-              const raffleSnap = await getDocs(raffleQ);
-              
-              if (!raffleSnap.empty) {
-                  // Find an active raffle owned by this specific host
-                  const activeRaffle = raffleSnap.docs.find(d => {
-                      const rData = d.data();
-                      return (currentUser && rData.hostUid === currentUser.uid) || (!currentUser && rData.hostDevice === myDeviceId);
+          const raffleQ = query(collection(db, 'raffle_sessions'), where('active', '==', true));
+          const raffleSnap = await getDocs(raffleQ);
+          if (!raffleSnap.empty) {
+              const activeRaffle = raffleSnap.docs.find(d => {
+                  const rData = d.data();
+                  return (currentUser && rData.hostUid === currentUser.uid) || (!currentUser && rData.hostDevice === myDeviceId);
+              });
+              if (activeRaffle) {
+                  updateData.raffleId = activeRaffle.id; // Attach to player
+                  await setDoc(doc(db, `raffle_sessions/${activeRaffle.id}/participants`, verificationParticipant.id), {
+                      id: verificationParticipant.id, deviceId: verificationParticipant.deviceId, name: verificationParticipant.name || 'Trainer', ign: verificationParticipant.ign, joinedAt: Date.now(), isWinner: false, isManual: true
                   });
-                  
-                  if (activeRaffle) {
-                      // Push them into the raffle silently!
-                      const raffleEntry = {
-                          id: verificationParticipant.id,
-                          deviceId: verificationParticipant.deviceId,
-                          name: verificationParticipant.name || 'Trainer',
-                          ign: verificationParticipant.ign,
-                          joinedAt: Date.now(),
-                          isWinner: false,
-                          isManual: true // Bypasses strict padlocks
-                      };
-                      await setDoc(doc(db, `raffle_sessions/${activeRaffle.id}/participants`, verificationParticipant.id), raffleEntry);
-                      addToast("Verified & Auto-Entered into active Raffle!", 'success');
-                  } else {
-                      addToast("Verified successfully!", 'success');
-                  }
-              } else {
-                  addToast("Verified successfully!", 'success');
-              }
-          } catch (raffleError) {
-              console.error("Raffle Auto-Entry Failed", raffleError);
-              addToast("Verified successfully! (Raffle entry skipped)", 'success');
+                  addToast("Verified & Auto-Entered into active Raffle!", 'success');
+              } else addToast("Verified successfully!", 'success');
+          } else addToast("Verified successfully!", 'success');
+      } catch (e) { console.error(e); }
+      
+      // Perform final update
+      await updateDoc(doc(db, `scavenger_hunts/${verificationHuntId}/participants`, verificationParticipant.id), updateData);
+      setVerificationParticipant(null);
+      setVerificationHuntId(null);
+
+      // Clear URL params
+      const currentUrl = window.location.href;
+      const [baseUrl] = currentUrl.split('?');
+      window.history.replaceState({}, document.title, baseUrl);
+      setVerifying(false);
+  };
+
+  const handleMassVerify = async () => {
+      const completed = participants.filter(p => {
+          const foundCount = p.foundTargetIds?.length || 0;
+          const totalCount = p.assignedTargets?.length || 5;
+          return foundCount > 0 && foundCount === totalCount && !p.isVerified;
+      });
+      if (completed.length === 0) { addToast("No pending players to verify.", "warning"); return; }
+      
+      setVerifying(true);
+      let raffleIdToAssign = null;
+      try {
+          const raffleQ = query(collection(db, 'raffle_sessions'), where('active', '==', true));
+          const raffleSnap = await getDocs(raffleQ);
+          if (!raffleSnap.empty) {
+              const activeRaffle = raffleSnap.docs.find(d => {
+                  const rData = d.data(); return (currentUser && rData.hostUid === currentUser.uid) || (!currentUser && rData.hostDevice === myDeviceId);
+              });
+              if (activeRaffle) raffleIdToAssign = activeRaffle.id;
           }
 
-          setVerificationParticipant(null);
-          setVerificationHuntId(null);
-          
-          // Clear URL params
-          const currentUrl = window.location.href;
-          const [baseUrl] = currentUrl.split('?');
-          window.history.replaceState({}, document.title, baseUrl);
-      } catch (e) {
-          addToast("Error verifying player", 'error');
-      } finally {
-          setVerifying(false);
-      }
+          for (const p of completed) {
+              let updateData: any = { isVerified: true, verifiedAt: Date.now() };
+              if (raffleIdToAssign) {
+                  updateData.raffleId = raffleIdToAssign;
+                  await setDoc(doc(db, `raffle_sessions/${raffleIdToAssign}/participants`, p.id), {
+                      id: p.id, deviceId: p.deviceId, name: p.name || 'Trainer', ign: p.ign, joinedAt: Date.now(), isWinner: false, isManual: true
+                  });
+              }
+              await updateDoc(doc(db, `scavenger_hunts/${currentHunt!.id}/participants`, p.id), updateData);
+          }
+          addToast(`Successfully verified ${completed.length} players!`, "success");
+      } catch (e) { addToast("Error during mass verification.", "error"); }
+      finally { setVerifying(false); }
   };
 
   const handleKickParticipant = async () => {
@@ -523,8 +532,8 @@ export const ScavengerHuntView: React.FC<ScavengerHuntViewProps> = ({ settings }
 
             <div className="flex-1 overflow-y-auto p-4">
                 <div className="flex justify-between items-center mb-4 text-xs font-bold text-gray-500 uppercase">
-                    <span>Players ({participants.length})</span>
-                    <span>Status</span>
+                    <div className="text-xs font-bold text-gray-500 uppercase">Players ({participants.length})</div>
+                    <Button onClick={handleMassVerify} variant="secondary" className="h-8 text-xs bg-green-900/20 text-green-400 border-green-500 hover:bg-green-600 hover:text-white transition-colors">Verify All Completed</Button>
                 </div>
                             <div className="space-y-2">
                                 {participants.length === 0 && <div className="text-center text-gray-700 text-xs py-10 italic">Waiting for entries...</div>}
@@ -562,11 +571,12 @@ export const ScavengerHuntView: React.FC<ScavengerHuntViewProps> = ({ settings }
                                                 </div>
                                                 <div className="flex items-center gap-4">
                                                     <div className="flex flex-col items-end">
-                                                        <span className={`text-xs font-black tracking-widest ${isDone ? 'text-green-400' : 'text-purple-400'}`}>
-                                                            {foundCount} / {totalCount}
-                                                        </span>
-                                                        <span className="text-[9px] uppercase text-gray-500">{isDone ? 'Finished!' : 'Found'}</span>
+                                                        <span className={`text-xs font-black tracking-widest ${isDone ? 'text-green-400' : 'text-purple-400'}`}>{foundCount} / {totalCount}</span>
+                                                        <span className="text-[9px] uppercase text-gray-500">{p.isVerified ? 'Verified' : isDone ? 'Pending Check' : 'Found'}</span>
                                                     </div>
+                                                    {isDone && !p.isVerified && (
+                                                        <button onClick={() => { setVerificationParticipant(p); setVerificationHuntId(currentHunt.id); }} className="px-2 py-1 bg-green-600 text-white rounded text-[10px] font-bold uppercase hover:bg-green-500">Verify</button>
+                                                    )}
                                                     <button onClick={() => setParticipantToKick(p.id!)} className="text-gray-700 hover:text-red-500 p-1"><X size={14}/></button>
                                                 </div>
                                             </div>
@@ -731,7 +741,7 @@ export const ScavengerHuntView: React.FC<ScavengerHuntViewProps> = ({ settings }
                 </div>
 
                 <div className="mt-6 mb-4">
-                    <h3 className="font-bold text-gray-400 uppercase text-xs">Legacy Pokémon Pool (Fallback)</h3>
+                    <h3 className="font-bold text-gray-400 uppercase text-xs">Real-World Tasks (Optional)</h3>
                 </div>
                 
                 <div className="space-y-2">
@@ -740,7 +750,7 @@ export const ScavengerHuntView: React.FC<ScavengerHuntViewProps> = ({ settings }
                         className="w-full bg-gray-900 border border-gray-800 p-3 focus:border-green-500 outline-none min-h-[150px] text-sm" 
                         value={pokemonPoolText} 
                         onChange={e => setPokemonPoolText(e.target.value)} 
-                        placeholder="Pikachu, Bulbasaur, Charmander, Squirtle..."
+                        placeholder="Take a selfie with the group, Buy a drink from the cafe..."
                     />
                 </div>
             </div>

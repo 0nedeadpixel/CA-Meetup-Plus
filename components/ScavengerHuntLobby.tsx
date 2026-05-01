@@ -6,7 +6,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { doc, onSnapshot, setDoc } from 'firebase/firestore';
 import { db } from '../firebase';
 import { Button } from './Button';
-import { Loader2, Map as MapIcon, Gamepad2, User, ShieldCheck, Shield, Copy, Trophy, Home } from 'lucide-react';
+import { Loader2, Map as MapIcon, Gamepad2, User, ShieldCheck, Shield, Copy, Trophy, Home, Check, CheckCircle, ArrowRight } from 'lucide-react';
 import { ScavengerHunt, ScavengerParticipant } from '../types';
 import { v4 as uuidv4 } from 'uuid';
 import { QRCodeSVG } from 'qrcode.react';
@@ -161,21 +161,6 @@ export const ScavengerHuntLobby: React.FC = () => {
 
   if (!hunt) return null;
 
-  if (isRegistered && participant?.isVerified) {
-      return (
-        <div className="h-[100dvh] bg-gray-950 flex flex-col items-center justify-center p-6 text-center text-white">
-            <div className="w-24 h-24 bg-green-500 rounded-full flex items-center justify-center mb-6 shadow-2xl animate-bounce">
-                <Trophy size={48} className="text-black fill-current" />
-            </div>
-            <h1 className="text-4xl font-black mb-2 uppercase italic text-green-500">Mission Complete!</h1>
-            <p className="text-gray-300 mb-8">You conquered <strong>{hunt.title}</strong>!</p>
-            <Button variant="secondary" onClick={handleGoCommunity} className="flex items-center gap-2">
-                <Home size={18}/> Return to Community
-            </Button>
-        </div>
-      )
-  }
-
   if (!isRegistered || !participant) {
       return (
           <div className="h-[100dvh] bg-gray-950 flex flex-col overflow-hidden text-white">
@@ -235,6 +220,10 @@ export const ScavengerHuntLobby: React.FC = () => {
       )
   }
 
+  // Separate Targets
+  const pokemonTargets = participant.assignedTargets?.filter(t => t.pokedexId) || [];
+  const customTasks = participant.assignedTargets?.filter(t => !t.pokedexId) || [];
+
   // Generate Admin Verification QR Code Value
   let baseUrl = window.location.origin + window.location.pathname;
   if (baseUrl.endsWith('/')) { baseUrl = baseUrl.slice(0, -1); }
@@ -257,75 +246,56 @@ export const ScavengerHuntLobby: React.FC = () => {
             <h3 className="text-xl font-bold mb-2">Your Catch-List</h3>
             <p className="text-sm text-gray-400 mb-6">Catch all of the following Pokémon during the event. Use the search string below to filter your storage!</p>
 
-            {/* Retro 3-Column Target Grid */}
-            <div className="w-full max-w-md mx-auto p-4">
-              {Object.entries(
-                participant.assignedTargets?.reduce((acc: any, target: any) => {
-                    const g = target.layerName || 'Targets';
-                    if (!acc[g]) acc[g] = [];
-                    acc[g].push(target);
-                    return acc;
-                }, {}) || {}
-              ).map(([layerName, targetsInLayer]: [string, any]) => (
-                <div key={layerName} className="mb-6">
-                    {/* Custom Layer Title */}
-                    <h3 className="text-sm font-black uppercase tracking-widest text-purple-400 mb-2 border-b border-purple-900/50 pb-1">
-                        {layerName}
-                    </h3>
-                    
-                    {/* Retro Grid mapping over targetsInLayer */}
-                    <div className="grid grid-cols-3 gap-3">
-                      {targetsInLayer.map((target: any) => {
-                        const isFound = participant.foundTargetIds?.includes(target.id) || false;
-                        return (
-                          <div 
-                            key={target.id} 
-                            onClick={() => toggleFound(target.id)}
-                            className={`relative flex flex-col items-center justify-center p-3 rounded-xl border-2 transition-all duration-300 cursor-pointer ${
-                              isFound 
-                                ? 'bg-gray-900 border-purple-500 shadow-[0_0_15px_rgba(168,85,247,0.2)]' 
-                                : 'bg-gray-800 border-gray-700 hover:border-gray-500'
-                            }`}
-                          >
-                            {/* Retro Pixel Sprite - Fallback to Pokéball if Dex ID is missing */}
-                            <img 
-                              src={target.pokedexId 
-                                ? `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/${target.pokedexId}.png`
-                                : `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/items/poke-ball.png`
-                              }
-                              alt={target.name}
-                              className={`w-24 h-24 shrink-0 object-contain drop-shadow-lg transition-all duration-300 ${
-                                isFound ? 'opacity-30 scale-125' : 'opacity-100 scale-150'
-                              }`}
-                              style={{ imageRendering: 'pixelated' }}
-                            />
-                            
-                            {/* Dex Number & Name (Always Visible) */}
-                            <div className="mt-2 flex flex-col items-center w-full">
-                              <span className="text-[10px] text-gray-500 font-mono tracking-widest">
-                                {target.pokedexId ? `#${String(target.pokedexId).padStart(3, '0')}` : '???'}
-                              </span>
-                              <span className={`text-xs font-black uppercase tracking-wider truncate w-full text-center mt-0.5 ${
-                                isFound ? 'text-purple-400 line-through' : 'text-white'
-                              }`}>
-                                {target.name}
-                              </span>
-                            </div>
-
-                            {/* Found Badge */}
-                            {isFound && (
-                              <div className="absolute -top-2 -right-2 bg-purple-500 text-white rounded-full p-1 border-2 border-gray-950 shadow-lg">
-                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round">
-                                  <polyline points="20 6 9 17 4 12"></polyline>
-                                </svg>
-                              </div>
-                            )}
-                          </div>
-                        );
-                      })}
-                    </div>
+            {/* Verified Banner */}
+            {participant.isVerified && (
+                <div className="mb-8 bg-green-900/20 border border-green-500/50 p-6 rounded-xl text-center shadow-[0_0_20px_rgba(34,197,94,0.2)]">
+                    <div className="w-16 h-16 bg-green-500/20 rounded-full flex items-center justify-center mx-auto mb-4 border border-green-500"><CheckCircle size={32} className="text-green-400" /></div>
+                    <h2 className="text-2xl font-black uppercase tracking-tighter italic text-green-400 mb-2">Verified!</h2>
+                    <p className="text-sm text-gray-300 mb-6">Your Ambassador has checked your work. Incredible job, Trainer!</p>
+                    {(participant as any).raffleId && (
+                        <button onClick={() => window.location.href = `/#/raffle/join/${(participant as any).raffleId}`} className="w-full h-14 rounded bg-purple-600 hover:bg-purple-500 text-white text-lg font-black shadow-xl animate-pulse-slow flex items-center justify-center">
+                            Enter the Raffle <ArrowRight size={20} className="ml-2" />
+                        </button>
+                    )}
                 </div>
-              ))}
+            )}
+
+            {/* Target Layout */}
+            <div className="w-full max-w-md mx-auto p-4">
+              {/* Pokémon Grid (No Layer Headers) */}
+              {pokemonTargets.length > 0 && (
+                  <div className="grid grid-cols-3 gap-3 mb-6">
+                      {pokemonTargets.map(target => {
+                          const isFound = participant.foundTargetIds?.includes(target.id) || false;
+                          return (
+                              <div key={target.id} onClick={() => toggleFound(target.id)} className={`relative flex flex-col items-center justify-center p-3 rounded-xl border-2 transition-all duration-300 cursor-pointer ${isFound ? 'bg-gray-900 border-purple-500 shadow-[0_0_15px_rgba(168,85,247,0.2)]' : 'bg-gray-800 border-gray-700 hover:border-gray-500'}`}>
+                                  <img src={`https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/versions/generation-i/red-blue/transparent/${target.pokedexId}.png`} alt={target.name} className={`w-24 h-24 shrink-0 object-contain drop-shadow-lg transition-all duration-300 ${isFound ? 'opacity-30 scale-125' : 'opacity-100 scale-150'}`} style={{ imageRendering: 'pixelated' }} />
+                                  <div className="mt-2 flex flex-col items-center w-full">
+                                      <span className="text-[10px] text-gray-500 font-mono tracking-widest">#{String(target.pokedexId).padStart(3, '0')}</span>
+                                      <span className={`text-xs font-black uppercase tracking-wider truncate w-full text-center mt-0.5 ${isFound ? 'text-purple-400 line-through' : 'text-white'}`}>{target.name}</span>
+                                  </div>
+                                  {isFound && <div className="absolute -top-2 -right-2 bg-purple-500 text-white rounded-full p-1 border-2 border-gray-950 shadow-lg"><Check size={14} strokeWidth={4}/></div>}
+                              </div>
+                          );
+                      })}
+                  </div>
+              )}
+
+              {/* Real-World Tasks */}
+              {customTasks.length > 0 && (
+                  <div className="space-y-2 mb-6">
+                      <h3 className="text-sm font-black uppercase tracking-widest text-blue-400 mb-3 border-b border-blue-900/50 pb-1">Real-World Tasks</h3>
+                      {customTasks.map(target => {
+                          const isFound = participant.foundTargetIds?.includes(target.id) || false;
+                          return (
+                              <div key={target.id} onClick={() => toggleFound(target.id)} className={`p-4 rounded-xl border-2 transition-all cursor-pointer flex items-center justify-between ${isFound ? 'bg-blue-900/20 border-blue-500 shadow-[0_0_15px_rgba(59,130,246,0.2)]' : 'bg-gray-800 border-gray-700 hover:border-gray-500'}`}>
+                                  <span className={`text-sm font-bold ${isFound ? 'text-blue-400 line-through' : 'text-white'}`}>{target.name}</span>
+                                  {isFound ? <CheckCircle size={24} className="text-blue-500" /> : <div className="w-6 h-6 rounded-full border-2 border-gray-600" />}
+                              </div>
+                          );
+                      })}
+                  </div>
+              )}
             </div>
 
             <div className="bg-gray-950 border border-gray-800 p-4 rounded mb-6 flex flex-col items-center mt-6">
