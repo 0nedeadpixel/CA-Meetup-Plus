@@ -956,8 +956,11 @@ export const RaffleView: React.FC<RaffleViewProps> = ({ settings, codes = [], on
           } else {
                let q;
                if (currentUser) {
-                   // Cloud Sync Mode
+                   // Cloud Sync Mode (Firebase Auth)
                    q = query(collection(db, 'raffle_sessions'), where('hostUid', '==', currentUser.uid));
+               } else if (discordUser) {
+                   // Cloud Sync Mode (Discord Auth)
+                   q = query(collection(db, 'raffle_sessions'), where('discordUid', '==', discordUser.id));
                } else {
                    // Device ID Mode (Fallback)
                    q = query(collection(db, 'raffle_sessions'), where("hostDevice", "==", myDeviceId));
@@ -973,8 +976,13 @@ export const RaffleView: React.FC<RaffleViewProps> = ({ settings, codes = [], on
       snap.forEach((doc: any) => {
           const data = doc.data();
           
-          // Filter out other device sessions if not global and not cloud-synced
-          if (!isGlobalView && !currentUser && data.hostDevice !== myDeviceId) return;
+          // Strictly filter out unauthorized sessions
+          if (!isGlobalView) {
+              const isOwner = (data.hostUid && currentUser && data.hostUid === currentUser.uid) ||
+                              (data.discordUid && discordUser && data.discordUid === discordUser.id) ||
+                              (data.hostDevice === myDeviceId);
+              if (!isOwner) return;
+          }
           
           let displayCommunity = data.communityName || 'Unknown Community';
           if ((!data.communityName || data.communityName === 'Unknown Community') && data.hostDevice === myDeviceId && settings?.ambassador?.communityName) {
