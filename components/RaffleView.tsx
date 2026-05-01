@@ -281,6 +281,13 @@ export const RaffleView: React.FC<RaffleViewProps> = ({ settings, codes = [], on
   }, [sessionId, authLoaded, currentUser, myDeviceId, discordUser]);
 
 
+  // Automatically fetch raffle history when on the main list view
+  useEffect(() => {
+      if (!sessionId && authLoaded && myDeviceId) {
+          fetchHistory(false);
+      }
+  }, [sessionId, authLoaded, currentUser, discordUser, myDeviceId]);
+
   // --- SESSION MANAGEMENT ---
   const createSession = async () => {
       if (!newRaffleName.trim()) return;
@@ -1408,11 +1415,57 @@ export const RaffleView: React.FC<RaffleViewProps> = ({ settings, codes = [], on
                     </div>
                 </div>
             </div>
-            <div className="flex-1 flex flex-col items-center justify-center p-6 text-center space-y-6">
-                <div className="w-24 h-24 bg-purple-900/20 rounded-full flex items-center justify-center border-2 border-purple-500/50"><QrCode size={48} className="text-purple-400" /></div>
-                <h3 className="text-2xl font-bold">Start New Event</h3>
-                <div className="w-full max-w-xs space-y-3"><input type="text" placeholder="Event Name (e.g. CD meetup)" value={newRaffleName} onChange={(e) => setNewRaffleName(e.target.value)} className="w-full bg-gray-900 border border-gray-800 p-3 text-center focus:border-purple-500 outline-none transition-all" /><Button variant="purple" onClick={createSession} icon={<PlayCircle />} fullWidth disabled={!newRaffleName.trim()}>Start Session</Button></div>
-                <button onClick={() => setViewState('SETTINGS')} className="text-xs text-gray-500 hover:text-white flex items-center gap-1 mt-4"><Settings size={12}/> Raffle Settings & History</button>
+            <div className="flex-1 overflow-y-auto p-4 space-y-6 pb-24">
+                {/* Create New Card */}
+                <div className="bg-gray-900/50 border-2 border-dashed border-purple-500/30 rounded-xl p-6 flex flex-col items-center justify-center transition-all hover:bg-purple-900/10 hover:border-purple-500/50">
+                    <div className="w-12 h-12 bg-purple-900/20 rounded-full flex items-center justify-center mb-3 border border-purple-500/50"><Plus size={24} className="text-purple-400" /></div>
+                    <h3 className="text-lg font-bold text-white mb-4">Create New Raffle</h3>
+                    <div className="w-full max-w-xs space-y-3">
+                        <input type="text" placeholder="Event Name (e.g. CD meetup)" value={newRaffleName} onChange={(e) => setNewRaffleName(e.target.value)} className="w-full bg-gray-950 border border-gray-800 p-3 text-center focus:border-purple-500 outline-none transition-all rounded" />
+                        <Button variant="purple" onClick={createSession} icon={<PlayCircle />} fullWidth disabled={!newRaffleName.trim()}>Start Session</Button>
+                    </div>
+                </div>
+
+                {/* List of Existing Sessions */}
+                <div className="space-y-3">
+                    <h3 className="text-xs font-bold text-gray-500 uppercase tracking-wider flex items-center gap-2"><History size={14}/> My Raffles</h3>
+                    {loadingHistory ? (
+                        <div className="text-center py-8 text-gray-500 animate-pulse">Loading raffles...</div>
+                    ) : winnerHistory.length === 0 ? (
+                        <div className="text-center py-8 text-gray-600 italic border border-gray-800 bg-gray-900/20 rounded-xl text-sm">No raffles found. Create one above!</div>
+                    ) : (
+                        winnerHistory.map(session => (
+                            <div 
+                                key={session.sessionId} 
+                                className={`bg-gray-900 border rounded-xl overflow-hidden flex flex-col cursor-pointer transition-all ${session.active ? 'border-green-500/50 hover:border-green-400 shadow-[0_0_15px_rgba(34,197,94,0.1)]' : 'border-gray-800 hover:border-purple-500/50'}`}
+                                onClick={() => {
+                                    if (session.active) {
+                                        localStorage.setItem('pogo_raffle_active_session', session.sessionId);
+                                        setSessionId(session.sessionId);
+                                    } else {
+                                        handleViewParticipants(session.sessionId);
+                                        setShowResultsModal(true);
+                                    }
+                                }}
+                            >
+                                <div className="p-4 flex justify-between items-center">
+                                    <div>
+                                        <div className="text-[10px] text-purple-500 font-black uppercase tracking-widest mb-1">{session.date}</div>
+                                        <h3 className="font-bold text-white text-lg leading-none">{session.raffleName}</h3>
+                                        <div className="text-[10px] text-gray-500 mt-1 uppercase font-bold">{session.winnerCount} Winners</div>
+                                    </div>
+                                    <div className="flex items-center gap-2">
+                                        {session.active ? (
+                                            <span className="px-3 py-1 bg-green-900/30 text-green-400 border border-green-500/50 rounded-full text-[10px] uppercase font-black flex items-center gap-1 animate-pulse-slow"><PlayCircle size={12}/> Active</span>
+                                        ) : (
+                                            <span className="px-3 py-1 bg-gray-800 text-gray-400 border border-gray-700 rounded-full text-[10px] uppercase font-bold flex items-center gap-1"><History size={12}/> Archived</span>
+                                        )}
+                                    </div>
+                                </div>
+                            </div>
+                        ))
+                    )}
+                </div>
             </div>
         </div>
       );
