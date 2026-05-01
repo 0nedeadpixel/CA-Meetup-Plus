@@ -66,6 +66,7 @@ export interface SessionData {
   linkedRaffleId?: string; // ID of the raffle session linked to this distribution
   isGhostSession?: boolean;
   isIssueMode?: boolean;
+  scavengerLayers?: ScavengerLayer[];
 }
 
 export interface ReportItem {
@@ -134,10 +135,18 @@ export interface RaffleParticipant {
   optedOutPrizeIds?: string[];
 }
 
+export interface ScavengerLayer {
+  id: string;
+  name: string; // e.g., "The Wilds", "Raid Bosses"
+  drawRequirement: number; // How many targets to randomly assign to a player from this layer
+  targets: ScavengerTarget[];
+}
+
 export interface ScavengerTarget {
   id: string;
   name: string;
   pokedexId?: number | null;
+  layerName?: string;
 }
 
 export interface ScavengerParticipant {
@@ -161,6 +170,7 @@ export interface ScavengerHunt {
   gameMode?: 'sequential' | 'free_roam';
   pokemonPool: string[]; // Legacy
   targets?: ScavengerTarget[];
+  scavengerLayers?: ScavengerLayer[];
   ambassador?: AmbassadorSettings;
   hostUid?: string | null;
   hostDevice?: string;

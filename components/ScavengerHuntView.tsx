@@ -9,7 +9,7 @@ import { auth, db } from '../firebase';
 import { onAuthStateChanged } from 'firebase/auth';
 // @ts-ignore
 import { doc, getDoc, collection, addDoc, updateDoc, deleteDoc, onSnapshot, serverTimestamp, query, orderBy, setDoc } from 'firebase/firestore';
-import { ScavengerHunt, ScavengerParticipant, AppSettings, ScavengerTarget } from '../types';
+import { ScavengerHunt, ScavengerParticipant, AppSettings, ScavengerTarget, ScavengerLayer } from '../types';
 import { v4 as uuidv4 } from 'uuid';
 import { QRCodeSVG } from 'qrcode.react';
 import { ConfirmationModal } from './ConfirmationModal';
@@ -76,10 +76,10 @@ export const ScavengerHuntView: React.FC<ScavengerHuntViewProps> = ({ settings }
   const [huntDesc, setHuntDesc] = useState('');
   const [huntMode, setHuntMode] = useState<'sequential' | 'free_roam'>('sequential');
   
-  // Pokemon Pool & Targets
+  // Pokemon Pool & Layers
   const [pokemonPoolText, setPokemonPoolText] = useState('');
-  const [targets, setTargets] = useState<ScavengerTarget[]>([]);
-  const [quickAddIds, setQuickAddIds] = useState('');
+  const [layers, setLayers] = useState<ScavengerLayer[]>([{ id: uuidv4(), name: 'Layer 1', drawRequirement: 5, targets: [] }]);
+  const [quickAddInputs, setQuickAddInputs] = useState<{[key: number]: string}>({});
   const [isFetchingPokemon, setIsFetchingPokemon] = useState(false);
 
   // UI State
@@ -211,12 +211,13 @@ export const ScavengerHuntView: React.FC<ScavengerHuntViewProps> = ({ settings }
       }
   };
 
-  const handleQuickAdd = async () => {
-      if (!quickAddIds.trim()) return;
+  const handleQuickAdd = async (layerIndex: number) => {
+      const idsText = quickAddInputs[layerIndex] || '';
+      if (!idsText.trim()) return;
       setIsFetchingPokemon(true);
       
       // Parse comma-separated string into an array of valid numbers
-      const ids = quickAddIds.split(',')
+      const ids = idsText.split(',')
           .map(s => parseInt(s.trim()))
           .filter(n => !isNaN(n) && n > 0 && n <= 1025); // Max current pokedex
       
@@ -247,8 +248,14 @@ export const ScavengerHuntView: React.FC<ScavengerHuntViewProps> = ({ settings }
       }
 
       if (fetchedTargets.length > 0) {
-          setTargets(prev => [...prev, ...fetchedTargets]);
-          setQuickAddIds(''); // Clear the input after success
+          const newLayers = [...layers];
+          newLayers[layerIndex].targets = [...newLayers[layerIndex].targets, ...fetchedTargets];
+          setLayers(newLayers);
+          
+          const newInputs = { ...quickAddInputs };
+          newInputs[layerIndex] = '';
+          setQuickAddInputs(newInputs); // Clear the input after success
+          
           addToast(`Added ${fetchedTargets.length} Pokémon successfully!`, 'success');
       } else {
           addToast("Failed to fetch Pokémon data. Check your IDs.", 'error');
@@ -267,7 +274,7 @@ export const ScavengerHuntView: React.FC<ScavengerHuntViewProps> = ({ settings }
           createdAt: Date.now(),
           gameMode: 'sequential',
           pokemonPool: [],
-          targets: [],
+          scavengerLayers: [{ id: uuidv4(), name: 'Layer 1', drawRequirement: 5, targets: [] }],
           ambassador: settings.ambassador,
           hostUid: currentUser ? currentUser.uid : null,
           hostDevice: myDeviceId
@@ -278,7 +285,7 @@ export const ScavengerHuntView: React.FC<ScavengerHuntViewProps> = ({ settings }
       setHuntDesc('');
       setHuntMode('sequential');
       setPokemonPoolText('');
-      setTargets([]);
+      setLayers(newHunt.scavengerLayers);
       setViewState('EDIT_HUNT');
   };
 
@@ -288,7 +295,7 @@ export const ScavengerHuntView: React.FC<ScavengerHuntViewProps> = ({ settings }
       setHuntDesc(hunt.description);
       setHuntMode(hunt.gameMode || 'sequential');
       setPokemonPoolText(hunt.pokemonPool?.join(', ') || '');
-      setTargets(hunt.targets || []);
+      setLayers(hunt.scavengerLayers?.length ? hunt.scavengerLayers : [{ id: uuidv4(), name: 'Legacy Targets', drawRequirement: hunt.targets?.length || 5, targets: hunt.targets || [] }]);
       setViewState('EDIT_HUNT');
   };
 
@@ -302,7 +309,7 @@ export const ScavengerHuntView: React.FC<ScavengerHuntViewProps> = ({ settings }
           description: huntDesc,
           gameMode: huntMode,
           pokemonPool: pokemonPoolText.split(',').map(p => p.trim()).filter(p => p !== ''),
-          targets: targets,
+          scavengerLayers: layers,
           ambassador: settings.ambassador // Update profile if changed
       };
 
@@ -544,74 +551,137 @@ export const ScavengerHuntView: React.FC<ScavengerHuntViewProps> = ({ settings }
 
             <div className="border-t border-gray-800 pt-6">
                 <div className="flex justify-between items-center mb-4">
-                    <h3 className="font-bold text-gray-400 uppercase text-xs">Hunt Targets</h3>
-                    <Button variant="secondary" onClick={() => setTargets([...targets, { id: uuidv4(), name: '', pokedexId: null }])} className="text-xs py-1 h-8 px-3">
-                        <Plus size={14} className="mr-1" /> Add Target
-                    </Button>
+                    <h3 className="font-bold text-gray-400 uppercase text-xs">Hunt Layers</h3>
                 </div>
                 
-                <div className="space-y-3">
-                    <p className="text-xs text-gray-500 mb-2">Add Pokémon targets and their corresponding Pokédex IDs below.</p>
-                    
-                    {/* QUICK ADD BY DEX # */}
-                    <div className="flex items-center gap-2 mb-4 bg-gray-900 border border-gray-800 p-2 rounded">
-                        <input
-                            type="text"
-                            className="flex-1 bg-transparent border-none outline-none text-sm text-white px-2 placeholder-gray-600"
-                            placeholder="Quick Add Dex IDs (e.g., 1, 4, 7, 25)"
-                            value={quickAddIds}
-                            onChange={e => setQuickAddIds(e.target.value)}
-                            onKeyDown={e => e.key === 'Enter' && handleQuickAdd()}
-                        />
-                        <Button 
-                            variant="secondary" 
-                            onClick={handleQuickAdd} 
-                            disabled={isFetchingPokemon || !quickAddIds.trim()}
-                            className="h-8 text-xs bg-purple-900/30 text-purple-400 border-purple-500/50 hover:bg-purple-900/50"
-                        >
-                            {isFetchingPokemon ? 'Fetching...' : 'Quick Add'}
-                        </Button>
-                    </div>
+                <div className="space-y-4">
+                    <p className="text-xs text-gray-500 mb-4">Organize your targets into layers (e.g. Common, Rare) to assign specific numbers of varying targets to players.</p>
 
-                    {targets.map((target, idx) => (
-                        <div key={target.id} className="flex items-center gap-2 bg-gray-900 border border-gray-800 p-2 rounded">
-                            <input
-                                type="text"
-                                className="flex-1 bg-transparent border-none outline-none text-sm text-white px-2"
-                                placeholder="Pokémon Name"
-                                value={target.name}
-                                onChange={e => {
-                                    const newTargets = [...targets];
-                                    newTargets[idx].name = e.target.value;
-                                    setTargets(newTargets);
-                                }}
-                            />
-                            <input
-                                type="number"
-                                className="w-24 bg-gray-950 border border-gray-800 outline-none text-sm text-white px-2 py-1 rounded focus:border-green-500"
-                                placeholder="Dex #"
-                                value={target.pokedexId || ''}
-                                onChange={e => {
-                                    const newTargets = [...targets];
-                                    newTargets[idx].pokedexId = e.target.value ? parseInt(e.target.value) : null;
-                                    setTargets(newTargets);
-                                }}
-                            />
-                            <button
+                    {layers.map((layer, layerIndex) => (
+                        <div key={layer.id} className="border border-gray-700 bg-gray-900 p-4 rounded-xl">
+                            {/* Layer Header */}
+                            <div className="flex gap-2 mb-4">
+                                <input 
+                                    type="text" 
+                                    value={layer.name} 
+                                    placeholder="Layer Name (e.g. Wild Spawns)" 
+                                    className="flex-1 bg-gray-950 border border-gray-800 p-2 text-sm text-white focus:border-green-500 outline-none rounded" 
+                                    onChange={e => {
+                                        const newLayers = [...layers];
+                                        newLayers[layerIndex].name = e.target.value;
+                                        setLayers(newLayers);
+                                    }} 
+                                />
+                                <input 
+                                    type="number" 
+                                    value={layer.drawRequirement || 0} 
+                                    placeholder="Draw Count" 
+                                    className="w-24 bg-gray-950 border border-gray-800 p-2 text-sm text-white focus:border-green-500 outline-none rounded" 
+                                    onChange={e => {
+                                        const newLayers = [...layers];
+                                        newLayers[layerIndex].drawRequirement = parseInt(e.target.value) || 0;
+                                        setLayers(newLayers);
+                                    }} 
+                                />
+                                <button 
+                                    onClick={() => setLayers(layers.filter(l => l.id !== layer.id))} 
+                                    className="px-3 bg-red-900/30 text-red-500 hover:bg-red-900/50 hover:text-red-400 border border-red-500/50 rounded flex items-center justify-center transition-colors"
+                                    title="Remove Layer"
+                                >
+                                    <Trash2 size={16}/>
+                                </button>
+                            </div>
+                            
+                            {/* QUICK ADD BY DEX # */}
+                            <div className="flex items-center gap-2 mb-4 bg-gray-950 border border-gray-800 p-2 rounded">
+                                <input
+                                    type="text"
+                                    className="flex-1 bg-transparent border-none outline-none text-sm text-white px-2 placeholder-gray-600"
+                                    placeholder="Quick Add Dex IDs (e.g., 1, 4, 7)"
+                                    value={quickAddInputs[layerIndex] || ''}
+                                    onChange={e => {
+                                        const newInputs = { ...quickAddInputs };
+                                        newInputs[layerIndex] = e.target.value;
+                                        setQuickAddInputs(newInputs);
+                                    }}
+                                    onKeyDown={e => e.key === 'Enter' && handleQuickAdd(layerIndex)}
+                                />
+                                <Button 
+                                    variant="secondary" 
+                                    onClick={() => handleQuickAdd(layerIndex)} 
+                                    disabled={isFetchingPokemon || !(quickAddInputs[layerIndex] || '').trim()}
+                                    className="h-8 text-xs bg-purple-900/30 text-purple-400 border-purple-500/50 hover:bg-purple-900/50"
+                                >
+                                    {isFetchingPokemon ? 'Fetching...' : 'Quick Add'}
+                                </Button>
+                            </div>
+
+                            {/* Target Mapping for this specific layer */}
+                            <div className="space-y-2 mb-4">
+                                {layer.targets.map((target, targetIndex) => (
+                                    <div key={target.id} className="flex items-center gap-2 bg-gray-950 border border-gray-800 p-2 rounded">
+                                        <input
+                                            type="text"
+                                            className="flex-1 bg-transparent border-none outline-none text-sm text-white px-2"
+                                            placeholder="Pokémon Name"
+                                            value={target.name}
+                                            onChange={e => {
+                                                const newLayers = [...layers];
+                                                newLayers[layerIndex].targets[targetIndex].name = e.target.value;
+                                                setLayers(newLayers);
+                                            }}
+                                        />
+                                        <input
+                                            type="number"
+                                            className="w-24 bg-gray-900 border border-gray-800 outline-none text-sm text-white px-2 py-1 rounded focus:border-green-500"
+                                            placeholder="Dex #"
+                                            value={target.pokedexId || ''}
+                                            onChange={e => {
+                                                const newLayers = [...layers];
+                                                newLayers[layerIndex].targets[targetIndex].pokedexId = e.target.value ? parseInt(e.target.value) : null;
+                                                setLayers(newLayers);
+                                            }}
+                                        />
+                                        <button
+                                            onClick={() => {
+                                                const newLayers = [...layers];
+                                                newLayers[layerIndex].targets = newLayers[layerIndex].targets.filter(t => t.id !== target.id);
+                                                setLayers(newLayers);
+                                            }}
+                                            className="p-1.5 text-gray-500 hover:text-red-400 rounded-full"
+                                        >
+                                            <Trash2 size={16} />
+                                        </button>
+                                    </div>
+                                ))}
+                                {layer.targets.length === 0 && (
+                                    <div className="text-center text-gray-600 text-sm py-4 border border-dashed border-gray-800 rounded">
+                                        No targets in this layer.
+                                    </div>
+                                )}
+                            </div>
+                            
+                            {/* Add Target */}
+                            <Button 
+                                variant="secondary" 
                                 onClick={() => {
-                                    setTargets(targets.filter(t => t.id !== target.id));
-                                }}
-                                className="p-1.5 text-gray-500 hover:text-red-400 rounded-full"
+                                    const newLayers = [...layers];
+                                    newLayers[layerIndex].targets.push({ id: uuidv4(), name: '', pokedexId: null, layerName: layer.name });
+                                    setLayers(newLayers);
+                                }} 
+                                className="text-xs py-1 h-8 px-3"
                             >
-                                <Trash2 size={16} />
-                            </button>
+                                <Plus size={14} className="mr-1" /> Add Target to {layer.name || 'Layer'}
+                            </Button>
                         </div>
                     ))}
-                    {targets.length === 0 && (
-                        <div className="text-center text-gray-600 text-sm py-4 border border-dashed border-gray-800 rounded">
-                            No targets added. Use the button above to start.
-                        </div>
-                    )}
+                    
+                    <Button 
+                        onClick={() => setLayers([...layers, { id: uuidv4(), name: `Layer ${layers.length + 1}`, drawRequirement: 1, targets: [] }])}
+                        className="w-full bg-gray-800 hover:bg-gray-700 text-white border-dashed border border-gray-600"
+                    >
+                        <Plus size={16} className="mr-2" /> Add New Layer
+                    </Button>
                 </div>
 
                 <div className="mt-6 mb-4">

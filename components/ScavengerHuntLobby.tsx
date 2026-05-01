@@ -77,7 +77,19 @@ export const ScavengerHuntLobby: React.FC = () => {
           let assignedPokemon: string[] = [];
           let assignedTargets: any[] = [];
           
-          if (targetsList.length > 0) {
+          if (hunt.scavengerLayers && hunt.scavengerLayers.length > 0) {
+              let finalAssignedTargets: any[] = [];
+              hunt.scavengerLayers.forEach(layer => {
+                  const shuffled = [...layer.targets].sort(() => 0.5 - Math.random());
+                  const drawn = shuffled.slice(0, layer.drawRequirement).map(t => ({
+                      ...t,
+                      layerName: layer.name // Tag it for the UI
+                  }));
+                  finalAssignedTargets = [...finalAssignedTargets, ...drawn];
+              });
+              assignedTargets = finalAssignedTargets;
+              assignedPokemon = assignedTargets.map(t => t.name);
+          } else if (targetsList.length > 0) {
               assignedTargets = targetsList.sort(() => 0.5 - Math.random()).slice(0, 5).map(t => ({
                   ...t,
                   pokedexId: t.pokedexId || null // Sanitize undefined to null
@@ -247,56 +259,73 @@ export const ScavengerHuntLobby: React.FC = () => {
 
             {/* Retro 3-Column Target Grid */}
             <div className="w-full max-w-md mx-auto p-4">
-              <div className="grid grid-cols-3 gap-3">
-                {participant.assignedTargets?.map((target) => {
-                  const isFound = participant.foundTargetIds?.includes(target.id) || false;
-                  return (
-                    <div 
-                      key={target.id} 
-                      onClick={() => toggleFound(target.id)}
-                      className={`relative flex flex-col items-center justify-center p-3 rounded-xl border-2 transition-all duration-300 cursor-pointer ${
-                        isFound 
-                          ? 'bg-gray-900 border-purple-500 shadow-[0_0_15px_rgba(168,85,247,0.2)]' 
-                          : 'bg-gray-800 border-gray-700 hover:border-gray-500'
-                      }`}
-                    >
-                      {/* Retro Pixel Sprite - Fallback to Pokéball if Dex ID is missing */}
-                      <img 
-                        src={target.pokedexId 
-                          ? `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/${target.pokedexId}.png`
-                          : `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/items/poke-ball.png`
-                        }
-                        alt={target.name}
-                        className={`w-24 h-24 shrink-0 object-contain drop-shadow-lg transition-all duration-300 ${
-                          isFound ? 'opacity-30 scale-125' : 'opacity-100 scale-150'
-                        }`}
-                        style={{ imageRendering: 'pixelated' }}
-                      />
-                      
-                      {/* Dex Number & Name (Always Visible) */}
-                      <div className="mt-2 flex flex-col items-center w-full">
-                        <span className="text-[10px] text-gray-500 font-mono tracking-widest">
-                          {target.pokedexId ? `#${String(target.pokedexId).padStart(3, '0')}` : '???'}
-                        </span>
-                        <span className={`text-xs font-black uppercase tracking-wider truncate w-full text-center mt-0.5 ${
-                          isFound ? 'text-purple-400 line-through' : 'text-white'
-                        }`}>
-                          {target.name}
-                        </span>
-                      </div>
+              {Object.entries(
+                participant.assignedTargets?.reduce((acc: any, target: any) => {
+                    const g = target.layerName || 'Targets';
+                    if (!acc[g]) acc[g] = [];
+                    acc[g].push(target);
+                    return acc;
+                }, {}) || {}
+              ).map(([layerName, targetsInLayer]: [string, any]) => (
+                <div key={layerName} className="mb-6">
+                    {/* Custom Layer Title */}
+                    <h3 className="text-sm font-black uppercase tracking-widest text-purple-400 mb-2 border-b border-purple-900/50 pb-1">
+                        {layerName}
+                    </h3>
+                    
+                    {/* Retro Grid mapping over targetsInLayer */}
+                    <div className="grid grid-cols-3 gap-3">
+                      {targetsInLayer.map((target: any) => {
+                        const isFound = participant.foundTargetIds?.includes(target.id) || false;
+                        return (
+                          <div 
+                            key={target.id} 
+                            onClick={() => toggleFound(target.id)}
+                            className={`relative flex flex-col items-center justify-center p-3 rounded-xl border-2 transition-all duration-300 cursor-pointer ${
+                              isFound 
+                                ? 'bg-gray-900 border-purple-500 shadow-[0_0_15px_rgba(168,85,247,0.2)]' 
+                                : 'bg-gray-800 border-gray-700 hover:border-gray-500'
+                            }`}
+                          >
+                            {/* Retro Pixel Sprite - Fallback to Pokéball if Dex ID is missing */}
+                            <img 
+                              src={target.pokedexId 
+                                ? `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/${target.pokedexId}.png`
+                                : `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/items/poke-ball.png`
+                              }
+                              alt={target.name}
+                              className={`w-24 h-24 shrink-0 object-contain drop-shadow-lg transition-all duration-300 ${
+                                isFound ? 'opacity-30 scale-125' : 'opacity-100 scale-150'
+                              }`}
+                              style={{ imageRendering: 'pixelated' }}
+                            />
+                            
+                            {/* Dex Number & Name (Always Visible) */}
+                            <div className="mt-2 flex flex-col items-center w-full">
+                              <span className="text-[10px] text-gray-500 font-mono tracking-widest">
+                                {target.pokedexId ? `#${String(target.pokedexId).padStart(3, '0')}` : '???'}
+                              </span>
+                              <span className={`text-xs font-black uppercase tracking-wider truncate w-full text-center mt-0.5 ${
+                                isFound ? 'text-purple-400 line-through' : 'text-white'
+                              }`}>
+                                {target.name}
+                              </span>
+                            </div>
 
-                      {/* Found Badge */}
-                      {isFound && (
-                        <div className="absolute -top-2 -right-2 bg-purple-500 text-white rounded-full p-1 border-2 border-gray-950 shadow-lg">
-                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round">
-                            <polyline points="20 6 9 17 4 12"></polyline>
-                          </svg>
-                        </div>
-                      )}
+                            {/* Found Badge */}
+                            {isFound && (
+                              <div className="absolute -top-2 -right-2 bg-purple-500 text-white rounded-full p-1 border-2 border-gray-950 shadow-lg">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round">
+                                  <polyline points="20 6 9 17 4 12"></polyline>
+                                </svg>
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })}
                     </div>
-                  );
-                })}
-              </div>
+                </div>
+              ))}
             </div>
 
             <div className="bg-gray-950 border border-gray-800 p-4 rounded mb-6 flex flex-col items-center mt-6">
