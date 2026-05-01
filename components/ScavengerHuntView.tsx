@@ -8,7 +8,7 @@ import { auth, db } from '../firebase';
 // @ts-ignore
 import { onAuthStateChanged } from 'firebase/auth';
 // @ts-ignore
-import { doc, getDoc, collection, addDoc, updateDoc, deleteDoc, onSnapshot, serverTimestamp, query, orderBy, setDoc } from 'firebase/firestore';
+import { doc, getDoc, getDocs, where, collection, addDoc, updateDoc, deleteDoc, onSnapshot, serverTimestamp, query, orderBy, setDoc } from 'firebase/firestore';
 import { ScavengerHunt, ScavengerParticipant, AppSettings, ScavengerTarget, ScavengerLayer } from '../types';
 import { v4 as uuidv4 } from 'uuid';
 import { QRCodeSVG } from 'qrcode.react';
@@ -182,10 +182,48 @@ export const ScavengerHuntView: React.FC<ScavengerHuntViewProps> = ({ settings }
       if (!verificationParticipant || !verificationHuntId) return;
       setVerifying(true);
       try {
+          // 1. Mark as verified with a strict timestamp
           await updateDoc(doc(db, `scavenger_hunts/${verificationHuntId}/participants`, verificationParticipant.id), {
-              isVerified: true
+              isVerified: true,
+              verifiedAt: Date.now() // Critical for sorting
           });
-          addToast("Verified successfully!", 'success');
+          
+          // 2. Auto-Raffle Entry Logic
+          try {
+              const raffleQ = query(collection(db, 'raffle_sessions'), where('active', '==', true));
+              const raffleSnap = await getDocs(raffleQ);
+              
+              if (!raffleSnap.empty) {
+                  // Find an active raffle owned by this specific host
+                  const activeRaffle = raffleSnap.docs.find(d => {
+                      const rData = d.data();
+                      return (currentUser && rData.hostUid === currentUser.uid) || (!currentUser && rData.hostDevice === myDeviceId);
+                  });
+                  
+                  if (activeRaffle) {
+                      // Push them into the raffle silently!
+                      const raffleEntry = {
+                          id: verificationParticipant.id,
+                          deviceId: verificationParticipant.deviceId,
+                          name: verificationParticipant.name || 'Trainer',
+                          ign: verificationParticipant.ign,
+                          joinedAt: Date.now(),
+                          isWinner: false,
+                          isManual: true // Bypasses strict padlocks
+                      };
+                      await setDoc(doc(db, `raffle_sessions/${activeRaffle.id}/participants`, verificationParticipant.id), raffleEntry);
+                      addToast("Verified & Auto-Entered into active Raffle!", 'success');
+                  } else {
+                      addToast("Verified successfully!", 'success');
+                  }
+              } else {
+                  addToast("Verified successfully!", 'success');
+              }
+          } catch (raffleError) {
+              console.error("Raffle Auto-Entry Failed", raffleError);
+              addToast("Verified successfully! (Raffle entry skipped)", 'success');
+          }
+
           setVerificationParticipant(null);
           setVerificationHuntId(null);
           
@@ -492,10 +530,18 @@ export const ScavengerHuntView: React.FC<ScavengerHuntViewProps> = ({ settings }
                                 {participants.length === 0 && <div className="text-center text-gray-700 text-xs py-10 italic">Waiting for entries...</div>}
                                 {[...participants]
                                     .sort((a, b) => {
+                                        // 1. Verified players ALWAYS go to the top, sorted strictly by WHEN they were verified
+                                        if (a.isVerified && b.isVerified) return ((a as any).verifiedAt || 0) - ((b as any).verifiedAt || 0);
+                                        if (a.isVerified) return -1;
+                                        if (b.isVerified) return 1;
+                                        
+                                        // 2. Unverified players sorted by most targets found
                                         const aFound = a.foundTargetIds?.length || 0;
                                         const bFound = b.foundTargetIds?.length || 0;
-                                        if (bFound !== aFound) return bFound - aFound; // Sort by most found
-                                        return (a.joinedAt as any) - (b.joinedAt as any); // Tie-breaker by join time
+                                        if (bFound !== aFound) return bFound - aFound; 
+                                        
+                                        // 3. Tie-breaker by join time
+                                        return (a.joinedAt as any) - (b.joinedAt as any);
                                     })
                                     .map((p, index) => {
                                         const foundCount = p.foundTargetIds?.length || 0;
