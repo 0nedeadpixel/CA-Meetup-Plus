@@ -1187,13 +1187,6 @@ export const Hub: React.FC<HubProps> = ({
                   <div>
                     <h3 className="text-lg font-bold text-white group-hover:text-primary transition-colors flex items-center gap-2">
                       {tool.title}
-                      {(tool as any).badge && (
-                        <span
-                          className={`text-[9px] px-1.5 py-[1px]  font-black uppercase tracking-wider leading-none self-center ${(tool as any).badge === "BETA" ? "bg-blue-500 text-black" : "bg-green-500 text-black"}`}
-                        >
-                          {(tool as any).badge}
-                        </span>
-                      )}
                     </h3>
                     <p className="text-sm text-gray-400 leading-tight">
                       {tool.desc}
@@ -1204,6 +1197,19 @@ export const Hub: React.FC<HubProps> = ({
                   <ArrowRight className="text-gray-600 group-hover:text-white transition-colors" />
                 )}
               </div>
+              
+              {(tool as any).badge && (
+                <div
+                  className={`absolute -right-4 -bottom-4 text-6xl font-black pointer-events-none transition-colors transform -rotate-12 select-none ${
+                    (tool as any).badge === "BETA" ? "text-blue-500/5 group-hover:text-blue-500/10" :
+                    (tool as any).badge === "ALPHA" ? "text-green-500/5 group-hover:text-green-500/10" :
+                    "text-pink-500/5 group-hover:text-pink-500/10"
+                  }`}
+                >
+                  {(tool as any).badge}
+                </div>
+              )}
+              
               <div className="absolute -bottom-10 -right-10 w-32 h-32 bg-gradient-to-br from-white/5 to-transparent rounded-full blur-2xl pointer-events-none" />
             </MotionDiv>
           ))}
