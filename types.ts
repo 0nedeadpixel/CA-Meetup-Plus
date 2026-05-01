@@ -217,6 +217,7 @@ export interface TriviaSession {
     id: string;
     hostDevice: string;
     hostUid?: string;
+    discordUid?: string;
     active: boolean;
     createdAt: number;
     title?: string;

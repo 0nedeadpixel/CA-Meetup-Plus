@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ArrowLeft, Trophy, Sparkles, Shuffle, UserPlus, Trash2, RefreshCw, QrCode, Users, StopCircle, PlayCircle, Gift, CheckCircle, Copy, Download, Link as LinkIcon, AlertTriangle, Ban, RotateCcw, Maximize2, X, Search, Settings, Plus, Star, ClipboardList, Edit2, Crown, ChevronRight, Check, History, Lock, BarChart3, Calendar, Minus, LogOut, ArrowUp, Hash, Zap, Info, FileText, Cloud, CheckSquare, Square } from 'lucide-react';
+import { ArrowLeft, Trophy, Sparkles, Shuffle, UserPlus, Trash2, RefreshCw, QrCode, Users, StopCircle, PlayCircle, Gift, CheckCircle, Copy, Download, Link as LinkIcon, AlertTriangle, Ban, RotateCcw, Maximize2, X, Search, Settings, Plus, Star, ClipboardList, Edit2, Crown, ChevronRight, Check, History, Lock, BarChart3, Calendar, Minus, LogOut, ArrowUp, Hash, Zap, Info, FileText, Cloud, CheckSquare, Square, Ticket } from 'lucide-react';
 import { Button } from './Button';
 // @ts-ignore
 import { useNavigate } from 'react-router-dom';
@@ -1417,12 +1417,17 @@ export const RaffleView: React.FC<RaffleViewProps> = ({ settings, codes = [], on
             </div>
             <div className="flex-1 overflow-y-auto p-4 space-y-6 pb-24">
                 {/* Create New Card */}
-                <div className="bg-gray-900/50 border-2 border-dashed border-purple-500/30 rounded-xl p-6 flex flex-col items-center justify-center transition-all hover:bg-purple-900/10 hover:border-purple-500/50">
-                    <div className="w-12 h-12 bg-purple-900/20 rounded-full flex items-center justify-center mb-3 border border-purple-500/50"><Plus size={24} className="text-purple-400" /></div>
-                    <h3 className="text-lg font-bold text-white mb-4">Create New Raffle</h3>
-                    <div className="w-full max-w-xs space-y-3">
-                        <input type="text" placeholder="Event Name (e.g. CD meetup)" value={newRaffleName} onChange={(e) => setNewRaffleName(e.target.value)} className="w-full bg-gray-950 border border-gray-800 p-3 text-center focus:border-purple-500 outline-none transition-all rounded" />
-                        <Button variant="purple" onClick={createSession} icon={<PlayCircle />} fullWidth disabled={!newRaffleName.trim()}>Start Session</Button>
+                <div className="relative overflow-hidden bg-gray-900/50 border-2 border-dashed border-purple-500/30 rounded-xl p-6 flex flex-col items-center justify-center transition-all hover:bg-purple-900/10 hover:border-purple-500/50 group">
+                    {/* Faded Ticket Watermark */}
+                    <Ticket className="absolute -right-6 -bottom-6 w-40 h-40 text-purple-500/5 group-hover:text-purple-500/10 transition-colors transform -rotate-12" strokeWidth={1} />
+                    
+                    {/* Foreground Content */}
+                    <div className="relative z-10 w-full flex flex-col items-center">
+                        <h3 className="text-lg font-bold text-white mb-4">Create New Raffle</h3>
+                        <div className="w-full max-w-xs space-y-3">
+                            <input type="text" placeholder="Event Name (e.g. CD meetup)" value={newRaffleName} onChange={(e) => setNewRaffleName(e.target.value)} className="w-full bg-gray-950 border border-gray-800 p-3 text-center focus:border-purple-500 outline-none transition-all rounded relative z-20" />
+                            <Button variant="purple" onClick={createSession} icon={<PlayCircle />} fullWidth disabled={!newRaffleName.trim()} className="relative z-20">Start Session</Button>
+                        </div>
                     </div>
                 </div>
 

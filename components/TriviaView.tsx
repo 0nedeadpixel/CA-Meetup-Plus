@@ -14,6 +14,7 @@ import { db, auth } from '../firebase';
 import { TriviaSession, TriviaQuestion, TriviaPlayer, AppSettings, UserRole } from '../types';
 import { ConfirmationModal } from './ConfirmationModal';
 import { useToast } from './ToastContext';
+import { useDiscordAuth } from './useDiscordAuth';
 
 // Fix for framer-motion type mismatch
 const MotionDiv = motion.div as any;
@@ -84,6 +85,7 @@ interface TriviaViewProps {
 export const TriviaView: React.FC<TriviaViewProps> = ({ settings }) => {
     const navigate = useNavigate();
     const { addToast } = useToast();
+    const { user: discordUser } = useDiscordAuth();
     const [currentUser, setCurrentUser] = useState<any>(null);
     const [userRole, setUserRole] = useState<UserRole>('user');
 
@@ -218,24 +220,33 @@ export const TriviaView: React.FC<TriviaViewProps> = ({ settings }) => {
 
     // 1. FETCH MY SESSIONS (DASHBOARD)
     useEffect(() => {
-        if (!myDeviceId && !currentUser) return; // Wait for init
+        if (!myDeviceId && !currentUser && !discordUser) return; // Wait for init
 
         let q;
         if (currentUser) {
-            // Cloud Mode: Show everything owned by this account
+            // Cloud Mode (Firebase Auth)
             q = query(collection(db, 'trivia_sessions'), where('hostUid', '==', currentUser.uid));
+        } else if (discordUser) {
+            // Cloud Mode (Discord Auth)
+            q = query(collection(db, 'trivia_sessions'), where('discordUid', '==', discordUser.id));
         } else {
             // Local Mode: STRICT filter by unique device ID
             q = query(collection(db, 'trivia_sessions'), where('hostDevice', '==', myDeviceId));
         }
         
         const unsub = onSnapshot(q, (snap: any) => {
-            const list = snap.docs.map((d: any) => ({ ...d.data() } as TriviaSession));
+            const list = snap.docs.map((d: any) => ({ ...d.data() } as TriviaSession))
+                .filter((t: any) => {
+                    // Padlock: Check Cloud UID, Discord UID, OR Local Device Fallback
+                    return (currentUser && t.hostUid === currentUser.uid) ||
+                           (discordUser && t.discordUid === discordUser.id) ||
+                           (t.hostDevice === myDeviceId);
+                });
             // Show ALL sessions, sorted new to old
             setMySessions(list.sort((a: any, b: any) => b.createdAt - a.createdAt));
         });
         return () => unsub();
-    }, [currentUser, myDeviceId]);
+    }, [currentUser, myDeviceId, discordUser]);
 
     // 2. SYNC ACTIVE SESSION
     useEffect(() => {
@@ -249,9 +260,10 @@ export const TriviaView: React.FC<TriviaViewProps> = ({ settings }) => {
                 if (viewMode !== 'DASHBOARD') setViewMode('DASHBOARD');
             } else {
                 // STRICT PADLOCK: You can ONLY access a live trivia game if you created it.
-                const isOwner = data.hostUid 
-                    ? currentUser && data.hostUid === currentUser.uid
-                    : data.hostDevice === myDeviceId;
+                // SECURITY CHECK: Does this belong to the logged-in Ambassador or their device?
+                const isOwner = (data.hostUid && currentUser && data.hostUid === currentUser.uid) ||
+                                (data.discordUid && discordUser && data.discordUid === discordUser.id) ||
+                                (data.hostDevice === myDeviceId);
 
                 if (!isOwner) {
                     addToast("Unauthorized: You cannot access another Host's active Trivia session.", 'error');
@@ -281,7 +293,7 @@ export const TriviaView: React.FC<TriviaViewProps> = ({ settings }) => {
         });
 
         return () => { unsubSession(); unsubPlayers(); };
-    }, [sessionId]);
+    }, [sessionId, currentUser, addToast, myDeviceId, discordUser]);
 
     // 3. TIMER LOGIC (LIVE ONLY)
     useEffect(() => {
@@ -408,6 +420,7 @@ export const TriviaView: React.FC<TriviaViewProps> = ({ settings }) => {
                 hostDevice: myDeviceId, // STRICT ID
                 // ADDED: Cloud Owner
                 hostUid: currentUser ? currentUser.uid : null,
+                discordUid: discordUser ? discordUser.id : null,
                 active: true,
                 createdAt: now,
                 mode: setupMode,
