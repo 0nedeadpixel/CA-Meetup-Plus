@@ -104,12 +104,10 @@ export const ScavengerHuntView: React.FC<ScavengerHuntViewProps> = ({ settings }
       const unsub = onSnapshot(q, (snap: any) => {
           const list = snap.docs.map((d: any) => ({ ...d.data() } as any))
               .filter((hunt: any) => {
-                  // Strict Padlock: Check Cloud UID, Discord UID, or Local Device
-                  if (hunt.hostUid || hunt.discordUid) {
-                      return (currentUser && hunt.hostUid === currentUser.uid) || 
-                             (discordUser && hunt.discordUid === discordUser.id);
-                  }
-                  return hunt.hostDevice === myDeviceId;
+                  // Padlock: Check Cloud UID, Discord UID, OR Local Device Fallback
+                  return (currentUser && hunt.hostUid === currentUser.uid) || 
+                         (discordUser && hunt.discordUid === discordUser.id) || 
+                         (hunt.hostDevice === myDeviceId);
               });
           setHunts(list);
       });
@@ -149,10 +147,10 @@ export const ScavengerHuntView: React.FC<ScavengerHuntViewProps> = ({ settings }
                       
                       const huntData = huntSnap.data() as any;
                       
-                      // SECURITY CHECK: Does this belong to the logged-in Ambassador?
+                      // SECURITY CHECK: Does this belong to the logged-in Ambassador or their device?
                       const isOwner = (huntData.hostUid && currentUser && huntData.hostUid === currentUser.uid) ||
                                       (huntData.discordUid && discordUser && huntData.discordUid === discordUser.id) ||
-                                      (!huntData.hostUid && !huntData.discordUid && huntData.hostDevice === myDeviceId);
+                                      (huntData.hostDevice === myDeviceId);
 
                       if (!isOwner) {
                           addToast("Unauthorized: This hunt belongs to another Ambassador.", 'error');
@@ -193,7 +191,7 @@ export const ScavengerHuntView: React.FC<ScavengerHuntViewProps> = ({ settings }
                   const rData = d.data();
                   return (currentUser && rData.hostUid === currentUser.uid) || 
                          (discordUser && rData.discordUid === discordUser.id) || 
-                         (!rData.hostUid && !rData.discordUid && rData.hostDevice === myDeviceId);
+                         (rData.hostDevice === myDeviceId);
               });
               if (activeRaffle) {
                   updateData.raffleId = activeRaffle.id; // Attach to player
@@ -235,7 +233,7 @@ export const ScavengerHuntView: React.FC<ScavengerHuntViewProps> = ({ settings }
                   const rData = d.data();
                   return (currentUser && rData.hostUid === currentUser.uid) || 
                          (discordUser && rData.discordUid === discordUser.id) || 
-                         (!rData.hostUid && !rData.discordUid && rData.hostDevice === myDeviceId);
+                         (rData.hostDevice === myDeviceId);
               });
               if (activeRaffle) raffleIdToAssign = activeRaffle.id;
           }
@@ -331,7 +329,7 @@ export const ScavengerHuntView: React.FC<ScavengerHuntViewProps> = ({ settings }
           gameMode: 'sequential',
           pokemonPool: [],
           scavengerLayers: [{ id: uuidv4(), name: 'Layer 1', drawRequirement: 5, targets: [] }],
-          ambassador: settings.ambassador,
+          ambassador: settings?.ambassador || null,
           hostUid: currentUser ? currentUser.uid : null,
           discordUid: discordUser ? discordUser.id : null,
           hostDevice: myDeviceId
@@ -367,8 +365,10 @@ export const ScavengerHuntView: React.FC<ScavengerHuntViewProps> = ({ settings }
           gameMode: huntMode,
           pokemonPool: pokemonPoolText.split(',').map(p => p.trim()).filter(p => p !== ''),
           scavengerLayers: layers,
-          ambassador: settings.ambassador // Update profile if changed
+          ambassador: settings?.ambassador || null
       };
+      // Safely sanitize any undefined properties before saving to Firebase to prevent silent crashes
+      Object.keys(updatedHunt).forEach(key => (updatedHunt as any)[key] === undefined && delete (updatedHunt as any)[key]);
 
       try {
           await setDoc(doc(db, 'scavenger_hunts', updatedHunt.id), updatedHunt);
