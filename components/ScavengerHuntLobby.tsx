@@ -250,15 +250,18 @@ export const ScavengerHuntLobby: React.FC = () => {
             <h3 className="text-xl font-bold mb-2">Your Catch-List</h3>
             <p className="text-sm text-gray-400 mb-6">Catch all of the following Pokémon during the event. Use the search string below to filter your storage!</p>
 
-            {/* Verified Banner */}
+            {/* Subtle Post-Verification State */}
             {participant.isVerified && (
-                <div className="mb-8 bg-green-900/20 border border-green-500/50 p-6 rounded-xl text-center shadow-[0_0_20px_rgba(34,197,94,0.2)]">
-                    <div className="w-16 h-16 bg-green-500/20 rounded-full flex items-center justify-center mx-auto mb-4 border border-green-500"><CheckCircle size={32} className="text-green-400" /></div>
-                    <h2 className="text-2xl font-black uppercase tracking-tighter italic text-green-400 mb-2">Verified!</h2>
-                    <p className="text-sm text-gray-300 mb-6">Your Ambassador has checked your work. Incredible job, Trainer!</p>
+                <div className="mb-6 flex flex-col items-center gap-3">
+                    <div className="bg-green-900/30 border border-green-500/50 text-green-400 px-4 py-2 rounded-full text-sm font-bold flex items-center gap-2 shadow-[0_0_10px_rgba(34,197,94,0.1)]">
+                        <CheckCircle size={16} /> Hunt Verified!
+                    </div>
                     {(participant as any).raffleId && (
-                        <button onClick={() => window.location.href = `/#/raffle/join/${(participant as any).raffleId}`} className="w-full h-14 rounded bg-purple-600 hover:bg-purple-500 text-white text-lg font-black shadow-xl animate-pulse-slow flex items-center justify-center">
-                            Enter the Raffle <ArrowRight size={20} className="ml-2" />
+                        <button 
+                            onClick={() => window.open(`/#/raffle/join/${(participant as any).raffleId}`, '_blank')} 
+                            className="text-purple-400 hover:text-purple-300 text-sm font-bold underline flex items-center gap-1 transition-colors"
+                        >
+                            Open Raffle Page <ArrowRight size={14} />
                         </button>
                     )}
                 </div>
