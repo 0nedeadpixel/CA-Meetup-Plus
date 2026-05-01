@@ -15,6 +15,7 @@ import { QRCodeSVG } from 'qrcode.react';
 import { ConfirmationModal } from './ConfirmationModal';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useToast } from './ToastContext';
+import { useDiscordAuth } from './useDiscordAuth';
 
 // Fix for framer-motion type mismatch
 const MotionDiv = motion.div as any;
@@ -26,6 +27,7 @@ interface ScavengerHuntViewProps {
 export const ScavengerHuntView: React.FC<ScavengerHuntViewProps> = ({ settings }) => {
   const navigate = useNavigate();
   const { addToast } = useToast();
+  const { user: discordUser } = useDiscordAuth();
   
   const [currentUser, setCurrentUser] = useState(auth.currentUser);
   const [userRole, setUserRole] = useState<'super_admin' | 'admin' | 'host' | 'user'>('user');
@@ -102,9 +104,10 @@ export const ScavengerHuntView: React.FC<ScavengerHuntViewProps> = ({ settings }
       const unsub = onSnapshot(q, (snap: any) => {
           const list = snap.docs.map((d: any) => ({ ...d.data() } as any))
               .filter((hunt: any) => {
-                  // Strict Padlock: Show if Cloud UID matches OR if Local Device ID matches
-                  if (hunt.hostUid) {
-                      return currentUser && hunt.hostUid === currentUser.uid;
+                  // Strict Padlock: Check Cloud UID, Discord UID, or Local Device
+                  if (hunt.hostUid || hunt.discordUid) {
+                      return (currentUser && hunt.hostUid === currentUser.uid) || 
+                             (discordUser && hunt.discordUid === discordUser.id);
                   }
                   return hunt.hostDevice === myDeviceId;
               });
@@ -147,9 +150,9 @@ export const ScavengerHuntView: React.FC<ScavengerHuntViewProps> = ({ settings }
                       const huntData = huntSnap.data() as any;
                       
                       // SECURITY CHECK: Does this belong to the logged-in Ambassador?
-                      const isOwner = huntData.hostUid 
-                          ? currentUser && huntData.hostUid === currentUser.uid
-                          : huntData.hostDevice === myDeviceId;
+                      const isOwner = (huntData.hostUid && currentUser && huntData.hostUid === currentUser.uid) ||
+                                      (huntData.discordUid && discordUser && huntData.discordUid === discordUser.id) ||
+                                      (!huntData.hostUid && !huntData.discordUid && huntData.hostDevice === myDeviceId);
 
                       if (!isOwner) {
                           addToast("Unauthorized: This hunt belongs to another Ambassador.", 'error');
@@ -188,7 +191,9 @@ export const ScavengerHuntView: React.FC<ScavengerHuntViewProps> = ({ settings }
           if (!raffleSnap.empty) {
               const activeRaffle = raffleSnap.docs.find(d => {
                   const rData = d.data();
-                  return (currentUser && rData.hostUid === currentUser.uid) || (!currentUser && rData.hostDevice === myDeviceId);
+                  return (currentUser && rData.hostUid === currentUser.uid) || 
+                         (discordUser && rData.discordUid === discordUser.id) || 
+                         (!rData.hostUid && !rData.discordUid && rData.hostDevice === myDeviceId);
               });
               if (activeRaffle) {
                   updateData.raffleId = activeRaffle.id; // Attach to player
@@ -227,7 +232,10 @@ export const ScavengerHuntView: React.FC<ScavengerHuntViewProps> = ({ settings }
           const raffleSnap = await getDocs(raffleQ);
           if (!raffleSnap.empty) {
               const activeRaffle = raffleSnap.docs.find(d => {
-                  const rData = d.data(); return (currentUser && rData.hostUid === currentUser.uid) || (!currentUser && rData.hostDevice === myDeviceId);
+                  const rData = d.data();
+                  return (currentUser && rData.hostUid === currentUser.uid) || 
+                         (discordUser && rData.discordUid === discordUser.id) || 
+                         (!rData.hostUid && !rData.discordUid && rData.hostDevice === myDeviceId);
               });
               if (activeRaffle) raffleIdToAssign = activeRaffle.id;
           }
@@ -325,6 +333,7 @@ export const ScavengerHuntView: React.FC<ScavengerHuntViewProps> = ({ settings }
           scavengerLayers: [{ id: uuidv4(), name: 'Layer 1', drawRequirement: 5, targets: [] }],
           ambassador: settings.ambassador,
           hostUid: currentUser ? currentUser.uid : null,
+          discordUid: discordUser ? discordUser.id : null,
           hostDevice: myDeviceId
       };
       setCurrentHunt(newHunt as ScavengerHunt);
