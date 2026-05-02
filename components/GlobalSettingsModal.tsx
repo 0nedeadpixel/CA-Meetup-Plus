@@ -226,15 +226,24 @@ export const GlobalSettingsModal: React.FC<GlobalSettingsModalProps> = ({ isOpen
                                         </div>
                                     )}
                                     
-                                    <div className="space-y-3 relative z-20">
+                                    <div className="space-y-3 relative z-20 flex flex-col items-center">
+                                        {/* Primary Button Preview */}
                                         {announceRequireDiscord ? (
                                             <Button fullWidth className="bg-[#5865F2] text-white border-transparent h-12">Discord Login Preview</Button>
                                         ) : (
                                             <Button fullWidth className="bg-purple-600 text-white border-transparent h-12">{announceBtnText}</Button>
                                         )}
                                         
+                                        {/* Dismiss Button Preview */}
+                                        {announceDismissible && (
+                                            <Button fullWidth variant="ghost" className="text-gray-400 hover:text-white h-10 bg-gray-800/30 border-transparent text-sm">I'll do it later</Button>
+                                        )}
+
+                                        {/* Secondary Button Preview (Small Text Link) */}
                                         {announceSecBtnActive && (
-                                            <Button fullWidth variant="ghost" className="text-gray-500 hover:text-white h-12 bg-gray-800/30 hover:bg-gray-800/60 !border-transparent text-sm">{announceSecBtnText}</Button>
+                                            <button className="text-[11px] text-gray-500 hover:text-purple-400 transition-colors mt-4 uppercase tracking-wider font-bold">
+                                                {announceSecBtnText}
+                                            </button>
                                         )}
                                     </div>
                                 </div>

@@ -1267,15 +1267,24 @@ export const Hub: React.FC<HubProps> = ({
                 </div>
               )}
               
-              <div className="space-y-3 relative z-20">
+              <div className="space-y-3 relative z-20 flex flex-col items-center">
+                {/* Primary Button */}
                 {globalConfig.announceRequireDiscord && !discordUser ? (
                     <Button fullWidth onClick={() => { setShowAnnouncement(false); discordLogin(); }} className="bg-[#5865F2] hover:bg-[#4752C4] text-white !border-transparent h-14">Link Discord Now</Button>
                 ) : globalConfig.announceBtnUrl ? (
                     <Button fullWidth onClick={() => { window.open(globalConfig.announceBtnUrl, '_blank'); setShowAnnouncement(false); }} className="bg-purple-600 hover:bg-purple-500 text-white !border-transparent h-14">{globalConfig.announceBtnText}</Button>
                 ) : null}
 
+                {/* Dismiss Button */}
+                {globalConfig.announceDismissible && (
+                  <Button fullWidth variant="ghost" onClick={() => setShowAnnouncement(false)} className="text-gray-400 hover:text-white h-12 bg-gray-800/30 hover:bg-gray-800/60 !border-transparent text-sm">I'll do it later</Button>
+                )}
+
+                {/* Secondary Button (Small Text Link) */}
                 {globalConfig.announceSecBtnActive && globalConfig.announceSecBtnUrl && (
-                    <Button fullWidth variant="ghost" onClick={() => { window.open(globalConfig.announceSecBtnUrl, '_blank'); setShowAnnouncement(false); }} className="text-gray-500 hover:text-white h-12 bg-gray-800/30 hover:bg-gray-800/60 !border-transparent text-sm">{globalConfig.announceSecBtnText}</Button>
+                    <button onClick={() => { window.open(globalConfig.announceSecBtnUrl, '_blank'); setShowAnnouncement(false); }} className="text-[11px] text-gray-500 hover:text-purple-400 transition-colors mt-4 uppercase tracking-wider font-bold">
+                        {globalConfig.announceSecBtnText}
+                    </button>
                 )}
               </div>
             </MotionDiv>
