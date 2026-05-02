@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from "react";
-import { X, Users, Shield, ShieldCheck, CheckCircle2, XCircle, Trash2 } from "lucide-react";
+import { X, ShieldCheck, ShieldAlert, Search, Trash2, Check, Shield, Users, Clock, Globe, ExternalLink } from 'lucide-react';
 import { collection, getDocs, doc, setDoc, deleteDoc } from "firebase/firestore";
 import { db } from "../firebase";
 import { motion, AnimatePresence } from "framer-motion";
@@ -195,8 +195,17 @@ export const AmbassadorDirectoryModal: React.FC<AmbassadorDirectoryModalProps> =
                     </div>
                     
                     <div className="min-w-0 pr-2">
-                      <div className="flex items-center gap-2">
-                        <span className="font-bold text-white truncate max-w-[120px] sm:max-w-[200px]">{user.discordUsername}</span>
+                      <div className="font-bold text-white text-base flex items-center gap-1">
+                          <a 
+                              href={`https://discord.com/users/${user.discordId}`} 
+                              target="_blank" 
+                              rel="noreferrer"
+                              className="hover:text-[#5865F2] transition-colors hover:underline flex items-center gap-1"
+                              title="Open Discord Profile"
+                          >
+                              {user.discordUsername || 'Unknown User'}
+                              <ExternalLink size={12} className="opacity-50" />
+                          </a>
                       </div>
                       <div className="text-xs text-gray-400 flex flex-col mt-1 truncate">
                         {user.email !== 'Guest Auth' && (

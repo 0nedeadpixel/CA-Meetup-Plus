@@ -108,7 +108,8 @@ export const Hub: React.FC<HubProps> = ({
   const [authLoading, setAuthLoading] = useState(false);
   const [secretTaps, setSecretTaps] = useState(0);
   const [discordRole, setDiscordRole] = useState<'guest' | 'host'>('guest');
-  const [showDiscordPrompt, setShowDiscordPrompt] = useState(false);
+  const [globalConfig, setGlobalConfig] = useState<any>(null);
+  const [showAnnouncement, setShowAnnouncement] = useState(false);
   const [timeLeft, setTimeLeft] = useState({ days: 0, hours: 0, minutes: 0, seconds: 0 });
 
   // TOAST STATE
@@ -343,27 +344,42 @@ export const Hub: React.FC<HubProps> = ({
     }
   }, [discordUser, settings.ambassador.communityName]);
 
-  // DISCORD PROMPT: Show modal on initial load if not linked
+  // GLOBAL ANNOUNCEMENT & TIMER LISTENER
   useEffect(() => {
-    if (!isDiscordLoading && !discordUser) {
-      setShowDiscordPrompt(true);
-    }
+    const unsub = onSnapshot(doc(db, 'global_settings', 'config'), (docSnap) => {
+      if (docSnap.exists()) {
+        const data = docSnap.data();
+        setGlobalConfig(data);
+        // Only show the announcement if it's active AND we aren't still checking Discord auth
+        if (data.announceActive && !isDiscordLoading) {
+          // If requireDiscord is true, hide if they are already logged in
+          if (data.announceRequireDiscord && discordUser) {
+            setShowAnnouncement(false);
+          } else {
+            setShowAnnouncement(true);
+          }
+        } else {
+          setShowAnnouncement(false);
+        }
+      }
+    });
+    return () => unsub();
   }, [isDiscordLoading, discordUser]);
 
-  // COUNTDOWN TIMER: Ticks down to Friday night
   useEffect(() => {
-    const targetDate = new Date('2026-05-01T23:59:59').getTime();
-
+    if (!globalConfig?.announceTimerDate || !globalConfig?.announceHasTimer) {
+      setTimeLeft({ days: 0, hours: 0, minutes: 0, seconds: 0 });
+      return;
+    }
+    const targetDate = new Date(globalConfig.announceTimerDate).getTime();
     const interval = setInterval(() => {
       const now = new Date().getTime();
       const distance = targetDate - now;
-
       if (distance < 0) {
         clearInterval(interval);
         setTimeLeft({ days: 0, hours: 0, minutes: 0, seconds: 0 });
         return;
       }
-
       setTimeLeft({
         days: Math.floor(distance / (1000 * 60 * 60 * 24)),
         hours: Math.floor((distance % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60)),
@@ -371,9 +387,8 @@ export const Hub: React.FC<HubProps> = ({
         seconds: Math.floor((distance % (1000 * 60)) / 1000)
       });
     }, 1000);
-
     return () => clearInterval(interval);
-  }, []);
+  }, [globalConfig?.announceTimerDate, globalConfig?.announceHasTimer]);
 
   const communityName = settings.ambassador.communityName || "My Community";
   const needsSetup = !settings.ambassador.communityName;
@@ -420,23 +435,23 @@ export const Hub: React.FC<HubProps> = ({
       id: "raffle",
       title: "Raffle Master",
       desc: "Host live giveaways for attendees in real-time.",
-      icon: <Ticket size={32} className="text-purple-400" />,
+      icon: <Ticket size={32} className={(isSuperAdmin || discordRole === 'host') ? "text-purple-400" : "text-gray-600"} />,
       path: "/raffle",
-      color: "border-purple-500/50 hover:border-purple-500",
-      shadowColor: "shadow-purple-500/20",
-      active: true,
-      locked: false,
+      color: (isSuperAdmin || discordRole === 'host') ? "border-purple-500/50 hover:border-purple-500 cursor-pointer" : "border-gray-800 opacity-50 cursor-not-allowed",
+      shadowColor: (isSuperAdmin || discordRole === 'host') ? "shadow-purple-500/20" : "shadow-none",
+      active: isSuperAdmin || discordRole === 'host',
+      locked: !(isSuperAdmin || discordRole === 'host'),
     },
     {
       id: "trivia",
       title: "Trivia Master",
       desc: "Custom mobile trivia for your community.",
-      icon: <BrainCircuit size={32} className="text-blue-400" />,
+      icon: <BrainCircuit size={32} className={(isSuperAdmin || discordRole === 'host') ? "text-blue-400" : "text-gray-600"} />,
       path: "/trivia",
-      color: "border-blue-500/50 hover:border-blue-500 cursor-pointer",
-      shadowColor: "shadow-blue-500/20",
-      active: true,
-      locked: false,
+      color: (isSuperAdmin || discordRole === 'host') ? "border-blue-500/50 hover:border-blue-500 cursor-pointer" : "border-gray-800 opacity-50 cursor-not-allowed",
+      shadowColor: (isSuperAdmin || discordRole === 'host') ? "shadow-blue-500/20" : "shadow-none",
+      active: isSuperAdmin || discordRole === 'host',
+      locked: !(isSuperAdmin || discordRole === 'host'),
       badge: "BETA",
     },
     {
@@ -1225,73 +1240,43 @@ export const Hub: React.FC<HubProps> = ({
         </div>
       </div>
 
-      {/* Mandatory Discord Prompt Modal */}
+      {/* Global Announcement Modal */}
       <AnimatePresence>
-        {showDiscordPrompt && !isDiscordLoading && !discordUser && (
+        {showAnnouncement && globalConfig && (
           <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
-            <MotionDiv 
-              initial={{ opacity: 0 }} 
-              animate={{ opacity: 1 }} 
-              exit={{ opacity: 0 }} 
-              className="absolute inset-0 bg-black/80 backdrop-blur-sm" 
-              onClick={() => setShowDiscordPrompt(false)} 
-            />
-            <MotionDiv 
-              initial={{ opacity: 0, y: 150, scale: 0.8 }} 
-              animate={{ opacity: 1, y: 0, scale: 1 }} 
-              exit={{ opacity: 0, y: 50, scale: 0.9 }} 
-              transition={{ type: "spring", bounce: 0.6, duration: 0.7 }}
-              className="relative bg-gray-900 border border-[#5865F2]/30 shadow-2xl p-6 pt-12 w-full max-w-sm rounded-xl text-center mt-12"
-            >
-              {/* Breakout Character Image */}
-              <div className="absolute -top-24 left-0 right-0 flex justify-center pointer-events-none z-10">
-                <img 
-                    src="https://app.fullertonpogo.com/img/character.webp" 
-                    alt="Guide" 
-                    className="h-32 w-auto drop-shadow-[0_10px_15px_rgba(0,0,0,0.5)]" 
-                />
-              </div>
-
-              <h3 className="text-xl font-bold text-white mb-2 relative z-20">Host Tools Locking Soon!</h3>
-              <p className="text-sm text-gray-400 mb-4 relative z-20">
-                We are locking the Code Distributor and other Host tools exclusively to Verified Ambassadors. Please link your Discord account before the deadline to ensure uninterrupted access!
-              </p>
+            <MotionDiv initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="absolute inset-0 bg-black/80 backdrop-blur-sm" onClick={() => globalConfig.announceDismissible && setShowAnnouncement(false)} />
+            <MotionDiv initial={{ opacity: 0, y: 150, scale: 0.8 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, y: 50, scale: 0.9 }} transition={{ type: "spring", bounce: 0.6, duration: 0.7 }} className="relative bg-gray-900 border border-purple-500/30 shadow-2xl p-6 pt-12 w-full max-w-sm rounded-xl text-center mt-12">
               
-              {/* Live Countdown Timer */}
-              <div className="flex justify-center gap-2 mb-6 relative z-20">
-                {Object.entries(timeLeft).map(([label, value]) => (
-                  <div key={label} className="bg-gray-950 border border-[#5865F2]/30 rounded-lg p-2 w-16 text-center shadow-inner">
-                    <div className="text-xl font-black text-white font-mono">{value.toString().padStart(2, '0')}</div>
-                    <div className="text-[9px] uppercase tracking-widest text-[#5865F2] font-bold mt-0.5">{label}</div>
-                  </div>
-                ))}
-              </div>
+              {globalConfig.announceImage && (
+                <div className="absolute -top-24 left-0 right-0 flex justify-center pointer-events-none z-10">
+                  <img src={globalConfig.announceImage} alt="Announcement" className="h-32 w-auto drop-shadow-[0_10px_15px_rgba(0,0,0,0.5)] object-contain" />
+                </div>
+              )}
+
+              <h3 className="text-xl font-bold text-white mb-2 relative z-20">{globalConfig.announceTitle}</h3>
+              <p className="text-sm text-gray-400 mb-4 relative z-20 whitespace-pre-wrap">{globalConfig.announceMessage}</p>
+              
+              {globalConfig.announceHasTimer && (
+                <div className="flex justify-center gap-2 mb-6 relative z-20">
+                  {Object.entries(timeLeft).map(([label, value]) => (
+                    <div key={label} className="bg-gray-950 border border-purple-500/30 rounded-lg p-2 w-16 text-center shadow-inner">
+                      <div className="text-xl font-black text-white font-mono">{value.toString().padStart(2, '0')}</div>
+                      <div className="text-[9px] uppercase tracking-widest text-purple-400 font-bold mt-0.5">{label}</div>
+                    </div>
+                  ))}
+                </div>
+              )}
               
               <div className="space-y-3 relative z-20">
-                {/* Primary Discord Button with Watermark */}
-                <Button 
-                  fullWidth 
-                  onClick={() => { setShowDiscordPrompt(false); discordLogin(); }} 
-                  className="bg-[#5865F2] hover:bg-[#4752C4] text-white !border-transparent h-14"
-                  watermark={
-                    <svg role="img" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" fill="currentColor">
-                      <path d="M20.317 4.3698a19.7913 19.7913 0 00-4.8851-1.5152.0741.0741 0 00-.0785.0371c-.211.3753-.4447.8648-.6083 1.2495-1.8447-.2762-3.68-.2762-5.4868 0-.1636-.3933-.4058-.8742-.6177-1.2495a.077.077 0 00-.0785-.037 19.7363 19.7363 0 00-4.8852 1.515.0699.0699 0 00-.0321.0277C.5334 9.0458-.319 13.5799.0992 18.0578a.0824.0824 0 00.0312.0561c2.0528 1.5076 4.0413 2.4228 5.9929 3.0294a.0777.0777 0 00.0842-.0276c.4616-.6304.8731-1.2952 1.226-1.9942a.076.076 0 00-.0416-.1057c-.6528-.2476-1.2743-.5495-1.8722-.8923a.077.077 0 01-.0076-.1277c.1258-.0943.2517-.1923.3718-.2914a.0743.0743 0 01.0776-.0105c3.9278 1.7933 8.18 1.7933 12.0614 0a.0739.0739 0 01.0788.0095c.1202.099.246.1981.3728.2924a.077.077 0 01-.0066.1276 12.2986 12.2986 0 01-1.873.8914.0766.0766 0 00-.0407.1067c.3604.698.7719 1.3628 1.225 1.9932a.076.076 0 00.0842.0286c1.961-.6067 3.9495-1.5219 6.0023-3.0294a.077.077 0 00.0313-.0552c.5004-5.177-.8382-9.6739-3.5485-13.6604a.061.061 0 00-.0312-.0286zM8.02 15.3312c-1.1825 0-2.1569-1.0857-2.1569-2.419 0-1.3332.9555-2.4189 2.157-2.4189 1.2108 0 2.1757 1.0952 2.1568 2.419 0 1.3332-.9555 2.4189-2.1569 2.4189zm7.9748 0c-1.1825 0-2.1569-1.0857-2.1569-2.419 0-1.3332.9554-2.4189 2.1569-2.4189 1.2108 0 2.1757 1.0952 2.1568 2.419 0 1.3332-.946 2.4189-2.1568 2.4189z"/>
-                    </svg>
-                  }
-                >
-                  <span className="relative z-10 font-bold text-base tracking-wide">Link Discord Now</span>
-                </Button>
+                {globalConfig.announceRequireDiscord && !discordUser ? (
+                    <Button fullWidth onClick={() => { setShowAnnouncement(false); discordLogin(); }} className="bg-[#5865F2] hover:bg-[#4752C4] text-white !border-transparent h-14">Link Discord Now</Button>
+                ) : globalConfig.announceBtnUrl ? (
+                    <Button fullWidth onClick={() => { window.open(globalConfig.announceBtnUrl, '_blank'); setShowAnnouncement(false); }} className="bg-purple-600 hover:bg-purple-500 text-white !border-transparent h-14">{globalConfig.announceBtnText}</Button>
+                ) : null}
 
-                {/* Secondary 'Later' Button with Watermark */}
-                <Button 
-                  fullWidth 
-                  variant="ghost" 
-                  onClick={() => setShowDiscordPrompt(false)} 
-                  className="text-gray-500 hover:text-white h-12 bg-gray-800/30 hover:bg-gray-800/60 !border-transparent"
-                  watermark={<Clock />}
-                >
-                  <span className="relative z-10">I'll do it later</span>
-                </Button>
+                {globalConfig.announceSecBtnActive && globalConfig.announceSecBtnUrl && (
+                    <Button fullWidth variant="ghost" onClick={() => { window.open(globalConfig.announceSecBtnUrl, '_blank'); setShowAnnouncement(false); }} className="text-gray-500 hover:text-white h-12 bg-gray-800/30 hover:bg-gray-800/60 !border-transparent text-sm">{globalConfig.announceSecBtnText}</Button>
+                )}
               </div>
             </MotionDiv>
           </div>
