@@ -163,12 +163,19 @@ export interface ScavengerParticipant {
     raffleId?: string;
 }
 
+export interface ScavengerTask {
+  id: string;
+  title: string;
+  description: string;
+}
+
 export interface ScavengerHunt {
   id: string;
   title: string;
   description: string;
   active: boolean;
   createdAt: number;
+  tasks?: ScavengerTask[];
   gameMode?: 'sequential' | 'free_roam';
   pokemonPool: string[]; // Legacy
   targets?: ScavengerTarget[];

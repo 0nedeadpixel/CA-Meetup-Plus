@@ -9,7 +9,7 @@ import { auth, db } from '../firebase';
 import { onAuthStateChanged } from 'firebase/auth';
 // @ts-ignore
 import { doc, getDoc, getDocs, where, collection, addDoc, updateDoc, deleteDoc, onSnapshot, serverTimestamp, query, orderBy, setDoc, deleteField } from 'firebase/firestore';
-import { ScavengerHunt, ScavengerParticipant, AppSettings, ScavengerTarget, ScavengerLayer } from '../types';
+import { ScavengerHunt, ScavengerParticipant, AppSettings, ScavengerTarget, ScavengerLayer, ScavengerTask } from '../types';
 import { v4 as uuidv4 } from 'uuid';
 import { QRCodeSVG } from 'qrcode.react';
 import { ConfirmationModal } from './ConfirmationModal';
@@ -77,6 +77,7 @@ export const ScavengerHuntView: React.FC<ScavengerHuntViewProps> = ({ settings }
   const [huntTitle, setHuntTitle] = useState('');
   const [huntDesc, setHuntDesc] = useState('');
   const [huntMode, setHuntMode] = useState<'sequential' | 'free_roam'>('sequential');
+  const [tasks, setTasks] = useState<ScavengerTask[]>([]);
   
   // Pokemon Pool & Layers
   const [pokemonPoolText, setPokemonPoolText] = useState('');
@@ -354,6 +355,7 @@ export const ScavengerHuntView: React.FC<ScavengerHuntViewProps> = ({ settings }
           gameMode: 'sequential',
           pokemonPool: [],
           scavengerLayers: [{ id: uuidv4(), name: 'Layer 1', drawRequirement: 5, targets: [] }],
+          tasks: [],
           ambassador: settings?.ambassador || null,
           hostUid: currentUser ? currentUser.uid : null,
           discordUid: discordUser ? discordUser.id : null,
@@ -366,6 +368,7 @@ export const ScavengerHuntView: React.FC<ScavengerHuntViewProps> = ({ settings }
       setHuntMode('sequential');
       setPokemonPoolText('');
       setLayers(newHunt.scavengerLayers);
+      setTasks([]);
       setViewState('EDIT_HUNT');
   };
 
@@ -376,6 +379,7 @@ export const ScavengerHuntView: React.FC<ScavengerHuntViewProps> = ({ settings }
       setHuntMode(hunt.gameMode || 'sequential');
       setPokemonPoolText(hunt.pokemonPool?.join(', ') || '');
       setLayers(hunt.scavengerLayers?.length ? hunt.scavengerLayers : [{ id: uuidv4(), name: 'Legacy Targets', drawRequirement: hunt.targets?.length || 5, targets: hunt.targets || [] }]);
+      setTasks(hunt.tasks || []);
       setViewState('EDIT_HUNT');
   };
 
@@ -390,6 +394,7 @@ export const ScavengerHuntView: React.FC<ScavengerHuntViewProps> = ({ settings }
           gameMode: huntMode,
           pokemonPool: pokemonPoolText.split(',').map(p => p.trim()).filter(p => p !== ''),
           scavengerLayers: layers,
+          tasks: tasks,
           ambassador: settings?.ambassador || null
       };
       // Safely sanitize any undefined properties before saving to Firebase to prevent silent crashes
@@ -438,33 +443,69 @@ export const ScavengerHuntView: React.FC<ScavengerHuntViewProps> = ({ settings }
             <AnimatePresence>
                 {verificationParticipant && (
                     <MotionDiv initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-50 bg-black/95 flex flex-col items-center justify-center p-6" onClick={() => setVerificationParticipant(null)}>
-                        <div className="bg-gray-900 border border-green-500/30 p-8 w-full max-w-sm text-center shadow-2xl" onClick={e => e.stopPropagation()}>
-                            <div className="w-16 h-16 bg-green-900/20 rounded-full flex items-center justify-center mx-auto mb-4 border border-green-500/50">
-                                <CheckCircle size={32} className="text-green-400" />
-                            </div>
-                            <h3 className="text-xl font-bold text-white mb-2">Verify Player</h3>
-                            <p className="text-sm text-gray-400 mb-4"><span className="font-bold text-white">{verificationParticipant.ign}</span> has completed the hunt!</p>
-                            
-                            <div className="bg-gray-950 border border-gray-800 p-4 rounded mb-6 text-left max-h-[200px] overflow-y-auto">
-                                <h4 className="text-xs uppercase text-gray-500 font-bold mb-2">Their Catch-List</h4>
-                                <ul className="list-disc pl-4 space-y-1">
-                                    {(verificationParticipant.assignedTargets?.map(t => t.name) || verificationParticipant.assignedPokemon)?.map((poke, i) => (
-                                        <li key={i} className="text-sm text-green-400">{poke}</li>
-                                    ))}
-                                    {(!verificationParticipant.assignedTargets?.length && (!verificationParticipant.assignedPokemon || verificationParticipant.assignedPokemon.length === 0)) && (
-                                        <li className="text-sm text-gray-500">None</li>
-                                    )}
-                                </ul>
+                        <div className="bg-gray-900 border border-green-500/50 p-6 w-full max-w-md shadow-[0_0_50px_rgba(0,0,0,0.8)] rounded-2xl flex flex-col max-h-[90vh]" onClick={e => e.stopPropagation()}>
+                            {/* Header */}
+                            <div className="flex items-center gap-4 mb-6 border-b border-gray-800 pb-4 shrink-0">
+                                <div className="w-16 h-16 bg-green-900/20 rounded-full flex items-center justify-center border border-green-500/50 shrink-0 shadow-[0_0_15px_rgba(34,197,94,0.2)]">
+                                    <CheckCircle size={32} className="text-green-400" />
+                                </div>
+                                <div>
+                                    <h3 className="text-2xl font-black text-white leading-none tracking-tight">{verificationParticipant.ign}</h3>
+                                    <p className="text-[10px] text-green-400 font-black uppercase tracking-widest mt-1.5">Ready for Verification</p>
+                                </div>
                             </div>
                             
-                            <div className="flex gap-2">
-                                <Button variant="secondary" className="flex-1" onClick={() => setVerificationParticipant(null)}>Cancel</Button>
+                            <div className="flex-1 overflow-y-auto space-y-6 pr-2 custom-scrollbar">
+                                {/* Catch List Grid */}
+                                <div>
+                                    <h4 className="text-[10px] uppercase tracking-widest text-gray-500 font-bold mb-3 flex items-center gap-2"><Map size={14} className="text-blue-400"/> Catch-List Matches</h4>
+                                    <div className="grid grid-cols-3 gap-2">
+                                        {verificationParticipant.assignedTargets?.map((t, i) => (
+                                            <div key={i} className="bg-gray-950 border border-gray-800 rounded-xl p-2 flex flex-col items-center text-center justify-center relative overflow-hidden group min-h-[90px]">
+                                                {t.pokedexId ? (
+                                                    <img src={`https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/${t.pokedexId}.png`} alt={t.name} className="w-16 h-16 object-contain drop-shadow-md relative z-10 group-hover:scale-110 transition-transform" />
+                                                ) : (
+                                                    <div className="w-12 h-12 flex items-center justify-center bg-gray-900 rounded-full mb-1 relative z-10"><Map size={20} className="text-gray-700"/></div>
+                                                )}
+                                                <span className="text-[10px] font-bold text-white relative z-10 mt-1">{t.name}</span>
+                                                {/* Background glow */}
+                                                <div className="absolute inset-0 bg-green-500/5 opacity-0 group-hover:opacity-100 transition-opacity" />
+                                            </div>
+                                        ))}
+                                        {!verificationParticipant.assignedTargets?.length && (
+                                            <div className="col-span-3 text-center text-gray-600 text-xs py-4 italic border border-gray-800 border-dashed rounded-xl">No specific targets assigned.</div>
+                                        )}
+                                    </div>
+                                </div>
+
+                                {/* Real World Tasks */}
+                                {currentHunt?.tasks && currentHunt.tasks.length > 0 && (
+                                    <div>
+                                        <h4 className="text-[10px] uppercase tracking-widest text-gray-500 font-bold mb-3 flex items-center gap-2"><ClipboardList size={14} className="text-purple-400"/> Required Tasks</h4>
+                                        <div className="space-y-2">
+                                            {currentHunt.tasks.map(task => (
+                                                <div key={task.id} className="bg-gray-950 border border-gray-800 rounded-xl p-3 flex gap-3 items-start">
+                                                    <div className="w-5 h-5 rounded border-2 border-gray-700 flex-shrink-0 mt-0.5" />
+                                                    <div>
+                                                        <div className="text-sm font-bold text-white leading-tight">{task.title}</div>
+                                                        {task.description && <div className="text-[10px] text-gray-500 mt-1 leading-snug">{task.description}</div>}
+                                                    </div>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
+                            
+                            {/* Footer Buttons */}
+                            <div className="flex gap-2 mt-6 pt-4 border-t border-gray-800 shrink-0">
+                                <Button variant="secondary" className="flex-1 border-gray-700 bg-gray-800 text-white h-14" onClick={() => setVerificationParticipant(null)}>Cancel</Button>
                                 <Button 
-                                    className="bg-green-600 hover:bg-green-500 border-none text-white font-bold h-10 flex-[2]" 
+                                    className="bg-green-600 hover:bg-green-500 border-none text-white font-black h-14 flex-[2] text-sm shadow-[0_0_15px_rgba(34,197,94,0.3)]" 
                                     onClick={handleVerifyComplete}
                                     disabled={verifying}
                                 >
-                                    {verifying ? 'Verifying...' : 'Mark as Verified'}
+                                    {verifying ? 'VERIFYING...' : 'VERIFY & ENTER RAFFLE'}
                                 </Button>
                             </div>
                         </div>
@@ -514,33 +555,69 @@ export const ScavengerHuntView: React.FC<ScavengerHuntViewProps> = ({ settings }
             <AnimatePresence>
                 {verificationParticipant && (
                     <MotionDiv initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-50 bg-black/95 flex flex-col items-center justify-center p-6" onClick={() => setVerificationParticipant(null)}>
-                        <div className="bg-gray-900 border border-green-500/30 p-8 w-full max-w-sm text-center shadow-2xl" onClick={e => e.stopPropagation()}>
-                            <div className="w-16 h-16 bg-green-900/20 rounded-full flex items-center justify-center mx-auto mb-4 border border-green-500/50">
-                                <CheckCircle size={32} className="text-green-400" />
-                            </div>
-                            <h3 className="text-xl font-bold text-white mb-2">Verify Player</h3>
-                            <p className="text-sm text-gray-400 mb-4"><span className="font-bold text-white">{verificationParticipant.ign}</span> has completed the hunt!</p>
-                            
-                            <div className="bg-gray-950 border border-gray-800 p-4 rounded mb-6 text-left max-h-[200px] overflow-y-auto">
-                                <h4 className="text-xs uppercase text-gray-500 font-bold mb-2">Their Catch-List</h4>
-                                <ul className="list-disc pl-4 space-y-1">
-                                    {(verificationParticipant.assignedTargets?.map(t => t.name) || verificationParticipant.assignedPokemon)?.map((poke, i) => (
-                                        <li key={i} className="text-sm text-green-400">{poke}</li>
-                                    ))}
-                                    {(!verificationParticipant.assignedTargets?.length && (!verificationParticipant.assignedPokemon || verificationParticipant.assignedPokemon.length === 0)) && (
-                                        <li className="text-sm text-gray-500">None</li>
-                                    )}
-                                </ul>
+                        <div className="bg-gray-900 border border-green-500/50 p-6 w-full max-w-md shadow-[0_0_50px_rgba(0,0,0,0.8)] rounded-2xl flex flex-col max-h-[90vh]" onClick={e => e.stopPropagation()}>
+                            {/* Header */}
+                            <div className="flex items-center gap-4 mb-6 border-b border-gray-800 pb-4 shrink-0">
+                                <div className="w-16 h-16 bg-green-900/20 rounded-full flex items-center justify-center border border-green-500/50 shrink-0 shadow-[0_0_15px_rgba(34,197,94,0.2)]">
+                                    <CheckCircle size={32} className="text-green-400" />
+                                </div>
+                                <div>
+                                    <h3 className="text-2xl font-black text-white leading-none tracking-tight">{verificationParticipant.ign}</h3>
+                                    <p className="text-[10px] text-green-400 font-black uppercase tracking-widest mt-1.5">Ready for Verification</p>
+                                </div>
                             </div>
                             
-                            <div className="flex gap-2">
-                                <Button variant="secondary" className="flex-1" onClick={() => setVerificationParticipant(null)}>Cancel</Button>
+                            <div className="flex-1 overflow-y-auto space-y-6 pr-2 custom-scrollbar">
+                                {/* Catch List Grid */}
+                                <div>
+                                    <h4 className="text-[10px] uppercase tracking-widest text-gray-500 font-bold mb-3 flex items-center gap-2"><Map size={14} className="text-blue-400"/> Catch-List Matches</h4>
+                                    <div className="grid grid-cols-3 gap-2">
+                                        {verificationParticipant.assignedTargets?.map((t, i) => (
+                                            <div key={i} className="bg-gray-950 border border-gray-800 rounded-xl p-2 flex flex-col items-center text-center justify-center relative overflow-hidden group min-h-[90px]">
+                                                {t.pokedexId ? (
+                                                    <img src={`https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/${t.pokedexId}.png`} alt={t.name} className="w-16 h-16 object-contain drop-shadow-md relative z-10 group-hover:scale-110 transition-transform" />
+                                                ) : (
+                                                    <div className="w-12 h-12 flex items-center justify-center bg-gray-900 rounded-full mb-1 relative z-10"><Map size={20} className="text-gray-700"/></div>
+                                                )}
+                                                <span className="text-[10px] font-bold text-white relative z-10 mt-1">{t.name}</span>
+                                                {/* Background glow */}
+                                                <div className="absolute inset-0 bg-green-500/5 opacity-0 group-hover:opacity-100 transition-opacity" />
+                                            </div>
+                                        ))}
+                                        {!verificationParticipant.assignedTargets?.length && (
+                                            <div className="col-span-3 text-center text-gray-600 text-xs py-4 italic border border-gray-800 border-dashed rounded-xl">No specific targets assigned.</div>
+                                        )}
+                                    </div>
+                                </div>
+
+                                {/* Real World Tasks */}
+                                {currentHunt?.tasks && currentHunt.tasks.length > 0 && (
+                                    <div>
+                                        <h4 className="text-[10px] uppercase tracking-widest text-gray-500 font-bold mb-3 flex items-center gap-2"><ClipboardList size={14} className="text-purple-400"/> Required Tasks</h4>
+                                        <div className="space-y-2">
+                                            {currentHunt.tasks.map(task => (
+                                                <div key={task.id} className="bg-gray-950 border border-gray-800 rounded-xl p-3 flex gap-3 items-start">
+                                                    <div className="w-5 h-5 rounded border-2 border-gray-700 flex-shrink-0 mt-0.5" />
+                                                    <div>
+                                                        <div className="text-sm font-bold text-white leading-tight">{task.title}</div>
+                                                        {task.description && <div className="text-[10px] text-gray-500 mt-1 leading-snug">{task.description}</div>}
+                                                    </div>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
+                            
+                            {/* Footer Buttons */}
+                            <div className="flex gap-2 mt-6 pt-4 border-t border-gray-800 shrink-0">
+                                <Button variant="secondary" className="flex-1 border-gray-700 bg-gray-800 text-white h-14" onClick={() => setVerificationParticipant(null)}>Cancel</Button>
                                 <Button 
-                                    className="bg-green-600 hover:bg-green-500 border-none text-white font-bold h-10 flex-[2]" 
+                                    className="bg-green-600 hover:bg-green-500 border-none text-white font-black h-14 flex-[2] text-sm shadow-[0_0_15px_rgba(34,197,94,0.3)]" 
                                     onClick={handleVerifyComplete}
                                     disabled={verifying}
                                 >
-                                    {verifying ? 'Verifying...' : 'Mark as Verified'}
+                                    {verifying ? 'VERIFYING...' : 'VERIFY & ENTER RAFFLE'}
                                 </Button>
                             </div>
                         </div>
@@ -782,14 +859,48 @@ export const ScavengerHuntView: React.FC<ScavengerHuntViewProps> = ({ settings }
                     <h3 className="font-bold text-gray-400 uppercase text-xs">Real-World Tasks (Optional)</h3>
                 </div>
                 
-                <div className="space-y-2">
-                    <p className="text-xs text-gray-500 mb-2">Paste a comma-separated list of Pokémon for players to find.</p>
-                    <textarea 
-                        className="w-full bg-gray-900 border border-gray-800 p-3 focus:border-green-500 outline-none min-h-[150px] text-sm" 
-                        value={pokemonPoolText} 
-                        onChange={e => setPokemonPoolText(e.target.value)} 
-                        placeholder="Take a selfie with the group, Buy a drink from the cafe..."
-                    />
+                <div className="space-y-4">
+                    <p className="text-xs text-gray-500 mb-2">Create custom tasks for players to complete (e.g. "Take a group selfie", "Find the hidden tag").</p>
+                    
+                    {tasks.map((task, index) => (
+                        <div key={task.id} className="bg-gray-950 border border-gray-800 p-3 rounded flex items-start gap-3">
+                            <div className="flex-1 space-y-2">
+                                <input 
+                                    type="text" 
+                                    placeholder="Task Title (e.g. 'Create Scavenger Tag')" 
+                                    className="w-full bg-transparent border-b border-gray-800 pb-1 text-sm text-white focus:border-green-500 outline-none font-bold"
+                                    value={task.title}
+                                    onChange={e => {
+                                        const newTasks = [...tasks];
+                                        newTasks[index].title = e.target.value;
+                                        setTasks(newTasks);
+                                    }}
+                                />
+                                <textarea 
+                                    placeholder="Detailed instructions... (Optional)" 
+                                    className="w-full bg-transparent border-none text-xs text-gray-400 outline-none resize-none"
+                                    rows={2}
+                                    value={task.description}
+                                    onChange={e => {
+                                        const newTasks = [...tasks];
+                                        newTasks[index].description = e.target.value;
+                                        setTasks(newTasks);
+                                    }}
+                                />
+                            </div>
+                            <button onClick={() => setTasks(tasks.filter(t => t.id !== task.id))} className="p-2 text-gray-600 hover:text-red-500 transition-colors">
+                                <Trash2 size={16} />
+                            </button>
+                        </div>
+                    ))}
+                    
+                    <Button 
+                        variant="secondary" 
+                        onClick={() => setTasks([...tasks, { id: uuidv4(), title: '', description: '' }])}
+                        className="w-full border-dashed border border-gray-700 bg-gray-900 text-gray-400 hover:text-white"
+                    >
+                        <Plus size={16} className="mr-2" /> Add Task
+                    </Button>
                 </div>
             </div>
         </div>
