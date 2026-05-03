@@ -6,12 +6,15 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { doc, onSnapshot, setDoc } from 'firebase/firestore';
 import { db } from '../firebase';
 import { Button } from './Button';
-import { Loader2, Map as MapIcon, Gamepad2, User, ShieldCheck, Shield, Copy, Trophy, Home, Check, CheckCircle, ArrowRight, Ticket } from 'lucide-react';
+import { Loader2, Map as MapIcon, Gamepad2, User, ShieldCheck, Shield, Copy, Trophy, Home, Check, CheckCircle, ArrowRight, Ticket, Info, X } from 'lucide-react';
 import { ScavengerHunt, ScavengerParticipant } from '../types';
 import { v4 as uuidv4 } from 'uuid';
 import { QRCodeSVG } from 'qrcode.react';
 import { Footer } from './Footer';
 import { useToast } from './ToastContext';
+import { motion, AnimatePresence } from 'framer-motion';
+
+const MotionDiv = motion.div as any;
 
 export const ScavengerHuntLobby: React.FC = () => {
   const { huntId } = useParams();
@@ -27,6 +30,7 @@ export const ScavengerHuntLobby: React.FC = () => {
   const [registering, setRegistering] = useState(false);
   const [participant, setParticipant] = useState<ScavengerParticipant | null>(null);
   const [hasAgreed, setHasAgreed] = useState(false);
+  const [selectedTask, setSelectedTask] = useState<any>(null);
 
   const getDeviceId = () => {
       let id = localStorage.getItem('pogo_scavenger_device_id');
@@ -237,6 +241,23 @@ export const ScavengerHuntLobby: React.FC = () => {
     <div className="h-[100dvh] bg-gray-900 text-white flex flex-col overflow-hidden relative">
         <div className="absolute inset-0 z-0 opacity-20 bg-[radial-gradient(#ffffff33_1px,transparent_1px)] [background-size:20px_20px]" />
         
+        {/* Task Info Modal */}
+        <AnimatePresence>
+            {selectedTask && (
+                <MotionDiv initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-[60] bg-black/80 backdrop-blur-sm flex items-center justify-center p-4" onClick={() => setSelectedTask(null)}>
+                    <MotionDiv initial={{ y: 50, scale: 0.9 }} animate={{ y: 0, scale: 1 }} exit={{ y: 20, scale: 0.9 }} className="bg-gray-900 border border-blue-500/30 p-6 rounded-2xl w-full max-w-sm shadow-2xl relative" onClick={(e: any) => e.stopPropagation()}>
+                        <button onClick={() => setSelectedTask(null)} className="absolute top-4 right-4 p-2 text-gray-500 hover:text-white transition-colors"><X size={20}/></button>
+                        <div className="flex items-center gap-3 mb-4 border-b border-gray-800 pb-4 pr-6">
+                            <div className="w-10 h-10 rounded-full bg-blue-900/30 border border-blue-500/30 flex items-center justify-center text-blue-400 shrink-0"><Info size={24}/></div>
+                            <h3 className="text-xl font-black text-white leading-tight">{selectedTask.title}</h3>
+                        </div>
+                        <p className="text-gray-300 text-sm whitespace-pre-wrap leading-relaxed max-h-[40vh] overflow-y-auto pr-2 custom-scrollbar">{selectedTask.description}</p>
+                        <Button fullWidth onClick={() => setSelectedTask(null)} className="mt-6 bg-blue-600 hover:bg-blue-500 border-none text-white font-bold h-12">Got it!</Button>
+                    </MotionDiv>
+                </MotionDiv>
+            )}
+        </AnimatePresence>
+
         {/* TOP BAR */}
         <div className="shrink-0 p-4 bg-gray-800/90 backdrop-blur-md border-b border-gray-700 flex justify-between items-center z-30 relative shadow-lg">
             <div><h2 className="font-bold text-sm text-white uppercase tracking-wider">{hunt.title}</h2><div className="text-[10px] text-gray-400 font-mono">Catch-List</div></div>
@@ -293,16 +314,28 @@ export const ScavengerHuntLobby: React.FC = () => {
                   </div>
               )}
 
-              {/* Real-World Tasks */}
-              {customTasks.length > 0 && (
-                  <div className="space-y-2 mb-6">
-                      <h3 className="text-sm font-black uppercase tracking-widest text-blue-400 mb-3 border-b border-blue-900/50 pb-1">Real-World Tasks</h3>
-                      {customTasks.map(target => {
-                          const isFound = participant.foundTargetIds?.includes(target.id) || false;
+              {/* Mission Objectives (Real-World Tasks) */}
+              {hunt.tasks && hunt.tasks.length > 0 && (
+                  <div className="space-y-3 mb-8">
+                      <h3 className="text-sm font-black uppercase tracking-widest text-blue-400 mb-3 border-b border-blue-900/50 pb-1 flex items-center gap-2">
+                          <CheckCircle size={16}/> Mission Objectives
+                      </h3>
+                      {hunt.tasks.map((task: any) => {
+                          const isFound = participant.foundTargetIds?.includes(task.id) || false;
                           return (
-                              <div key={target.id} onClick={() => toggleFound(target.id)} className={`p-4 rounded-xl border-2 transition-all cursor-pointer flex items-center justify-between ${isFound ? 'bg-blue-900/20 border-blue-500 shadow-[0_0_15px_rgba(59,130,246,0.2)]' : 'bg-gray-800 border-gray-700 hover:border-gray-500'}`}>
-                                  <span className={`text-sm font-bold ${isFound ? 'text-blue-400 line-through' : 'text-white'}`}>{target.name}</span>
-                                  {isFound ? <CheckCircle size={24} className="text-blue-500" /> : <div className="w-6 h-6 rounded-full border-2 border-gray-600" />}
+                              <div key={task.id} className={`p-3 rounded-xl border-2 transition-all flex items-center justify-between ${isFound ? 'bg-blue-900/20 border-blue-500 shadow-[0_0_15px_rgba(59,130,246,0.2)]' : 'bg-gray-900 border-gray-700 hover:border-gray-600'}`}>
+                                  <div className="flex items-center gap-3 flex-1 cursor-pointer" onClick={() => toggleFound(task.id)}>
+                                      {isFound ? <CheckCircle size={22} className="text-blue-500 shrink-0 drop-shadow-md" /> : <div className="w-5 h-5 rounded-full border-2 border-gray-500 shrink-0 ml-0.5" />}
+                                      <span className={`text-sm font-bold line-clamp-2 ${isFound ? 'text-blue-400 line-through opacity-70' : 'text-white'}`}>{task.title}</span>
+                                  </div>
+                                  {task.description && (
+                                      <button 
+                                          onClick={(e) => { e.stopPropagation(); setSelectedTask(task); }} 
+                                          className="ml-3 p-2 shrink-0 bg-gray-800 hover:bg-gray-700 border border-gray-700 rounded-full text-blue-400 transition-colors shadow-sm"
+                                      >
+                                          <Info size={18} />
+                                      </button>
+                                  )}
                               </div>
                           );
                       })}
