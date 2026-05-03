@@ -352,12 +352,14 @@ export const Hub: React.FC<HubProps> = ({
         setGlobalConfig(data);
         // Only show the announcement if it's active AND we aren't still checking Discord auth
         if (data.announceActive && !isDiscordLoading) {
-          // If requireDiscord is true, hide if they are already logged in
-          if (data.announceRequireDiscord && discordUser) {
-            setShowAnnouncement(false);
-          } else {
-            setShowAnnouncement(true);
+          if (data.announceOncePerDay) {
+            const lastSeen = localStorage.getItem('pogo_announce_last_seen');
+            if (lastSeen === new Date().toDateString()) {
+              setShowAnnouncement(false);
+              return;
+            }
           }
+          setShowAnnouncement(true);
         } else {
           setShowAnnouncement(false);
         }
@@ -365,6 +367,13 @@ export const Hub: React.FC<HubProps> = ({
     });
     return () => unsub();
   }, [isDiscordLoading, discordUser]);
+
+  const handleCloseAnnouncement = () => {
+    if (globalConfig?.announceOncePerDay) {
+      localStorage.setItem('pogo_announce_last_seen', new Date().toDateString());
+    }
+    setShowAnnouncement(false);
+  };
 
   useEffect(() => {
     if (!globalConfig?.announceTimerDate || !globalConfig?.announceHasTimer) {
@@ -1244,7 +1253,7 @@ export const Hub: React.FC<HubProps> = ({
       <AnimatePresence>
         {showAnnouncement && globalConfig && (
           <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
-            <MotionDiv initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="absolute inset-0 bg-black/80 backdrop-blur-sm" onClick={() => globalConfig.announceDismissible && setShowAnnouncement(false)} />
+            <MotionDiv initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="absolute inset-0 bg-black/80 backdrop-blur-sm" onClick={() => globalConfig.announceDismissible && handleCloseAnnouncement()} />
             <MotionDiv initial={{ opacity: 0, y: 150, scale: 0.8 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, y: 50, scale: 0.9 }} transition={{ type: "spring", bounce: 0.6, duration: 0.7 }} className="relative bg-gray-900 border border-purple-500/30 shadow-2xl p-6 pt-12 w-full max-w-sm rounded-xl text-center mt-12">
               
               {globalConfig.announceImage && (
@@ -1270,19 +1279,19 @@ export const Hub: React.FC<HubProps> = ({
               <div className="space-y-3 relative z-20 flex flex-col items-center">
                 {/* Primary Button */}
                 {globalConfig.announceRequireDiscord && !discordUser ? (
-                    <Button fullWidth onClick={() => { setShowAnnouncement(false); discordLogin(); }} className="bg-[#5865F2] hover:bg-[#4752C4] text-white !border-transparent h-14">Link Discord Now</Button>
+                    <Button fullWidth onClick={() => { handleCloseAnnouncement(); discordLogin(); }} className="bg-[#5865F2] hover:bg-[#4752C4] text-white !border-transparent h-14">Link Discord Now</Button>
                 ) : globalConfig.announceBtnUrl ? (
-                    <Button fullWidth onClick={() => { window.open(globalConfig.announceBtnUrl, '_blank'); setShowAnnouncement(false); }} className="bg-purple-600 hover:bg-purple-500 text-white !border-transparent h-14">{globalConfig.announceBtnText}</Button>
+                    <Button fullWidth onClick={() => { window.open(globalConfig.announceBtnUrl, '_blank'); handleCloseAnnouncement(); }} className="bg-purple-600 hover:bg-purple-500 text-white !border-transparent h-14">{globalConfig.announceBtnText}</Button>
                 ) : null}
 
                 {/* Dismiss Button */}
                 {globalConfig.announceDismissible && (
-                  <Button fullWidth variant="ghost" onClick={() => setShowAnnouncement(false)} className="text-gray-400 hover:text-white h-12 bg-gray-800/30 hover:bg-gray-800/60 !border-transparent text-sm">I'll do it later</Button>
+                  <Button fullWidth variant="ghost" onClick={() => handleCloseAnnouncement()} className="text-gray-400 hover:text-white h-12 bg-gray-800/30 hover:bg-gray-800/60 !border-transparent text-sm">I'll do it later</Button>
                 )}
 
                 {/* Secondary Button (Small Text Link) */}
                 {globalConfig.announceSecBtnActive && globalConfig.announceSecBtnUrl && (
-                    <button onClick={() => { window.open(globalConfig.announceSecBtnUrl, '_blank'); setShowAnnouncement(false); }} className="text-[11px] text-gray-500 hover:text-purple-400 transition-colors mt-4 uppercase tracking-wider font-bold">
+                    <button onClick={() => { window.open(globalConfig.announceSecBtnUrl, '_blank'); handleCloseAnnouncement(); }} className="text-[11px] text-gray-500 hover:text-purple-400 transition-colors mt-4 uppercase tracking-wider font-bold">
                         {globalConfig.announceSecBtnText}
                     </button>
                 )}

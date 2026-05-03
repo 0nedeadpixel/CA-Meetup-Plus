@@ -40,6 +40,7 @@ export const GlobalSettingsModal: React.FC<GlobalSettingsModalProps> = ({ isOpen
     const [announceSecBtnText, setAnnounceSecBtnText] = useState('Support the Developer ☕');
     const [announceSecBtnUrl, setAnnounceSecBtnUrl] = useState('');
     const [announceDismissible, setAnnounceDismissible] = useState(true);
+    const [announceOncePerDay, setAnnounceOncePerDay] = useState(false);
 
     const [loading, setLoading] = useState(false);
     const [saving, setSaving] = useState(false);
@@ -65,6 +66,7 @@ export const GlobalSettingsModal: React.FC<GlobalSettingsModalProps> = ({ isOpen
                         if (data.announceBtnText) setAnnounceBtnText(data.announceBtnText);
                         if (data.announceBtnUrl) setAnnounceBtnUrl(data.announceBtnUrl);
                         if (data.announceDismissible !== undefined) setAnnounceDismissible(data.announceDismissible);
+                        if (data.announceOncePerDay !== undefined) setAnnounceOncePerDay(data.announceOncePerDay);
                         if (data.announceSecBtnActive !== undefined) setAnnounceSecBtnActive(data.announceSecBtnActive);
                         if (data.announceSecBtnText) setAnnounceSecBtnText(data.announceSecBtnText);
                         if (data.announceSecBtnUrl) setAnnounceSecBtnUrl(data.announceSecBtnUrl);
@@ -85,7 +87,7 @@ export const GlobalSettingsModal: React.FC<GlobalSettingsModalProps> = ({ isOpen
             await setDoc(doc(db, 'global_settings', 'config'), {
                 footerText, footerLink, announceActive, announceTitle, announceMessage,
                 announceImage, announceHasTimer, announceTimerDate, announceRequireDiscord,
-                announceBtnText, announceBtnUrl, announceDismissible,
+                announceBtnText, announceBtnUrl, announceDismissible, announceOncePerDay,
                 announceSecBtnActive, announceSecBtnText, announceSecBtnUrl
             }, { merge: true });
             addToast('Global settings saved!', 'success');
@@ -131,6 +133,7 @@ export const GlobalSettingsModal: React.FC<GlobalSettingsModalProps> = ({ isOpen
                                         <h3 className="text-sm font-black text-white uppercase tracking-widest mb-4 flex items-center gap-2"><Globe size={16} className="text-purple-500"/> Announcement Modal</h3>
                                         <Toggle label="Enable Global Modal Overlay" checked={announceActive} onChange={setAnnounceActive} />
                                         <Toggle label="Allow Users to Dismiss (Close)" checked={announceDismissible} onChange={setAnnounceDismissible} />
+                                        <Toggle label="Limit to Once Per Day (Per User)" checked={announceOncePerDay} onChange={setAnnounceOncePerDay} />
                                         
                                         <div>
                                             <label className="block text-xs font-bold text-gray-400 uppercase mb-1">Headline</label>
@@ -159,20 +162,16 @@ export const GlobalSettingsModal: React.FC<GlobalSettingsModalProps> = ({ isOpen
                                     <div className="space-y-3 pt-6 border-t border-gray-800">
                                         <h3 className="text-sm font-black text-white uppercase tracking-widest mb-4">Primary Action Button</h3>
                                         <Toggle label="Require Discord Login" checked={announceRequireDiscord} onChange={setAnnounceRequireDiscord} />
-                                        <p className="text-[10px] text-gray-500 -mt-2">If enabled, non-authenticated users will be forced to log in to Discord. If disabled (or if already logged in), they will see your Custom Link below.</p>
+                                        <p className="text-[10px] text-gray-500 -mt-2">If enabled, non-authenticated users will be prompted to log in to Discord. Users who are already linked will see the Custom Link button below as a fallback.</p>
                                         
-                                        {!announceRequireDiscord && (
-                                            <>
-                                                <div>
-                                                    <label className="block text-xs font-bold text-gray-400 uppercase mb-1">Custom Button Text</label>
-                                                    <input type="text" value={announceBtnText} onChange={(e) => setAnnounceBtnText(e.target.value)} className="w-full bg-gray-950 border border-gray-800 p-3 focus:border-purple-500 outline-none text-white rounded" />
-                                                </div>
-                                                <div>
-                                                    <label className="block text-xs font-bold text-gray-400 uppercase mb-1">Custom Link URL</label>
-                                                    <input type="url" value={announceBtnUrl} onChange={(e) => setAnnounceBtnUrl(e.target.value)} className="w-full bg-gray-950 border border-gray-800 p-3 focus:border-purple-500 outline-none text-white rounded text-sm" placeholder="https://..." />
-                                                </div>
-                                            </>
-                                        )}
+                                        <div>
+                                            <label className="block text-xs font-bold text-gray-400 uppercase mb-1">Custom Button Text</label>
+                                            <input type="text" value={announceBtnText} onChange={(e) => setAnnounceBtnText(e.target.value)} className="w-full bg-gray-950 border border-gray-800 p-3 focus:border-purple-500 outline-none text-white rounded" />
+                                        </div>
+                                        <div>
+                                            <label className="block text-xs font-bold text-gray-400 uppercase mb-1">Custom Link URL</label>
+                                            <input type="url" value={announceBtnUrl} onChange={(e) => setAnnounceBtnUrl(e.target.value)} className="w-full bg-gray-950 border border-gray-800 p-3 focus:border-purple-500 outline-none text-white rounded text-sm" placeholder="https://..." />
+                                        </div>
                                     </div>
 
                                     <div className="space-y-3 pt-6 border-t border-gray-800">
@@ -229,9 +228,12 @@ export const GlobalSettingsModal: React.FC<GlobalSettingsModalProps> = ({ isOpen
                                     <div className="space-y-3 relative z-20 flex flex-col items-center">
                                         {/* Primary Button Preview */}
                                         {announceRequireDiscord ? (
-                                            <Button fullWidth className="bg-[#5865F2] text-white border-transparent h-12">Discord Login Preview</Button>
+                                            <>
+                                                <Button fullWidth className="bg-[#5865F2] text-white border-transparent h-12 mb-2">Discord Login (Guest View)</Button>
+                                                <Button fullWidth className="bg-purple-600 text-white border-transparent h-12">{announceBtnText || 'Fallback Button'} (Linked View)</Button>
+                                            </>
                                         ) : (
-                                            <Button fullWidth className="bg-purple-600 text-white border-transparent h-12">{announceBtnText}</Button>
+                                            <Button fullWidth className="bg-purple-600 text-white border-transparent h-12">{announceBtnText || 'Custom Button'}</Button>
                                         )}
                                         
                                         {/* Dismiss Button Preview */}
