@@ -118,6 +118,8 @@ export const ScavengerHuntLobby: React.FC = () => {
           
           await setDoc(doc(db, `scavenger_hunts/${huntId}/participants/${pid}`), newParticipant);
           localStorage.setItem(`pogo_scavenger_${huntId}_pid`, pid);
+          localStorage.setItem('pogo_saved_name', inputName.trim());
+          localStorage.setItem('pogo_saved_ign', inputIgn.trim());
           setParticipant(newParticipant);
           setIsRegistered(true);
       } catch (e: any) {
