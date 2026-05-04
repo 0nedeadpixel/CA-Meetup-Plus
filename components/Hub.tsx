@@ -354,7 +354,8 @@ export const Hub: React.FC<HubProps> = ({
         if (data.announceActive && !isDiscordLoading) {
           if (data.announceOncePerDay) {
             const lastSeen = localStorage.getItem('pogo_announce_last_seen');
-            if (lastSeen === new Date().toDateString()) {
+            const currentCacheKey = new Date().toDateString() + '_' + data.announceTitle;
+            if (lastSeen === currentCacheKey) {
               setShowAnnouncement(false);
               return;
             }
@@ -370,7 +371,7 @@ export const Hub: React.FC<HubProps> = ({
 
   const handleCloseAnnouncement = () => {
     if (globalConfig?.announceOncePerDay) {
-      localStorage.setItem('pogo_announce_last_seen', new Date().toDateString());
+      localStorage.setItem('pogo_announce_last_seen', new Date().toDateString() + '_' + globalConfig.announceTitle);
     }
     setShowAnnouncement(false);
   };
