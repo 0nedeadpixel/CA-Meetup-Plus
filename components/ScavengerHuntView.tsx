@@ -92,6 +92,11 @@ export const ScavengerHuntView: React.FC<ScavengerHuntViewProps> = ({ settings }
   const [itemToDelete, setItemToDelete] = useState<string | null>(null);
   const [participantToKick, setParticipantToKick] = useState<string | null>(null);
 
+  // Raffle State
+  const [showRaffleModal, setShowRaffleModal] = useState(false);
+  const [activeRaffles, setActiveRaffles] = useState<any[]>([]);
+  const [pendingVerifyAction, setPendingVerifyAction] = useState<'SINGLE' | 'MASS' | 'RETROACTIVE' | null>(null);
+
   // Verification
   const [verificationParticipant, setVerificationParticipant] = useState<ScavengerParticipant | null>(null);
   const [verificationHuntId, setVerificationHuntId] = useState<string | null>(null);
@@ -180,40 +185,93 @@ export const ScavengerHuntView: React.FC<ScavengerHuntViewProps> = ({ settings }
 
   // --- ACTIONS ---
 
+  const fetchHostRaffles = async () => {
+      const raffleQ = query(collection(db, 'raffle_sessions'), where('active', '==', true));
+      const raffleSnap = await getDocs(raffleQ);
+      return raffleSnap.docs.map(d => ({ id: d.id, ...d.data() })).filter((r: any) => {
+          return (currentUser && r.hostUid === currentUser.uid) || 
+                 (discordUser && r.discordUid === discordUser.id) || 
+                 (r.hostDevice === myDeviceId);
+      });
+  };
+
+  const executeRaffleAction = async (selectedRaffleId: string | null, actionOverride?: 'SINGLE' | 'MASS' | 'RETROACTIVE') => {
+      const actionToExecute = actionOverride || pendingVerifyAction;
+      setVerifying(true);
+      try {
+          if (actionToExecute === 'SINGLE') {
+              if (!verificationParticipant || !verificationHuntId) return;
+              let updateData: any = { isVerified: true, verifiedAt: Date.now() };
+              if (selectedRaffleId) {
+                  updateData.raffleId = selectedRaffleId;
+                  await setDoc(doc(db, `raffle_sessions/${selectedRaffleId}/participants`, verificationParticipant.id), {
+                      id: verificationParticipant.id, deviceId: verificationParticipant.deviceId, name: verificationParticipant.name || 'Trainer', ign: verificationParticipant.ign, joinedAt: Date.now(), isWinner: false, isManual: true
+                  });
+              }
+              await updateDoc(doc(db, `scavenger_hunts/${verificationHuntId}/participants`, verificationParticipant.id), updateData);
+              addToast(selectedRaffleId ? "Verified & Entered into Raffle!" : "Verified successfully!", 'success');
+              
+              setVerificationParticipant(null);
+              setVerificationHuntId(null);
+              const currentUrl = window.location.href;
+              const [baseUrl] = currentUrl.split('?');
+              window.history.replaceState({}, document.title, baseUrl);
+          } else if (actionToExecute === 'MASS') {
+              const completed = participants.filter(p => {
+                  const foundCount = p.foundTargetIds?.length || 0;
+                  const totalCount = p.assignedTargets?.length || (p as any).assignedPokemon?.length || 5;
+                  return foundCount > 0 && foundCount === totalCount && !p.isVerified;
+              });
+              await Promise.all(completed.map(async (p) => {
+                  let updateData: any = { isVerified: true, verifiedAt: Date.now() };
+                  if (selectedRaffleId) {
+                      updateData.raffleId = selectedRaffleId;
+                      await setDoc(doc(db, `raffle_sessions/${selectedRaffleId}/participants`, p.id), {
+                          id: p.id, deviceId: p.deviceId, name: p.name || 'Trainer', ign: p.ign, joinedAt: Date.now(), isWinner: false, isManual: true
+                      });
+                  }
+                  await updateDoc(doc(db, `scavenger_hunts/${currentHunt!.id}/participants`, p.id), updateData);
+              }));
+              addToast(`Successfully verified ${completed.length} players!`, "success");
+          } else if (actionToExecute === 'RETROACTIVE') {
+              const toSync = participants.filter(p => p.isVerified && !p.raffleId);
+              if (selectedRaffleId && toSync.length > 0) {
+                  await Promise.all(toSync.map(async (p) => {
+                      let updateData: any = { raffleId: selectedRaffleId };
+                      await setDoc(doc(db, `raffle_sessions/${selectedRaffleId}/participants`, p.id), {
+                          id: p.id, deviceId: p.deviceId, name: p.name || 'Trainer', ign: p.ign, joinedAt: Date.now(), isWinner: false, isManual: true
+                      });
+                      await updateDoc(doc(db, `scavenger_hunts/${currentHunt!.id}/participants`, p.id), updateData);
+                  }));
+                  addToast(`Successfully synced ${toSync.length} players to raffle!`, "success");
+              }
+          }
+      } catch (e) {
+          console.error(e);
+          addToast("Error during execution.", "error");
+      } finally {
+          setVerifying(false);
+          setShowRaffleModal(false);
+          setPendingVerifyAction(null);
+      }
+  };
+
   const handleVerifyComplete = async () => {
       if (!verificationParticipant || !verificationHuntId) return;
       setVerifying(true);
-      let updateData: any = { isVerified: true, verifiedAt: Date.now() };
       try {
-          const raffleQ = query(collection(db, 'raffle_sessions'), where('active', '==', true));
-          const raffleSnap = await getDocs(raffleQ);
-          if (!raffleSnap.empty) {
-              const activeRaffle = raffleSnap.docs.find(d => {
-                  const rData = d.data();
-                  return (currentUser && rData.hostUid === currentUser.uid) || 
-                         (discordUser && rData.discordUid === discordUser.id) || 
-                         (rData.hostDevice === myDeviceId);
-              });
-              if (activeRaffle) {
-                  updateData.raffleId = activeRaffle.id; // Attach to player
-                  await setDoc(doc(db, `raffle_sessions/${activeRaffle.id}/participants`, verificationParticipant.id), {
-                      id: verificationParticipant.id, deviceId: verificationParticipant.deviceId, name: verificationParticipant.name || 'Trainer', ign: verificationParticipant.ign, joinedAt: Date.now(), isWinner: false, isManual: true
-                  });
-                  addToast("Verified & Auto-Entered into active Raffle!", 'success');
-              } else addToast("Verified successfully!", 'success');
-          } else addToast("Verified successfully!", 'success');
-      } catch (e) { console.error(e); }
-      
-      // Perform final update
-      await updateDoc(doc(db, `scavenger_hunts/${verificationHuntId}/participants`, verificationParticipant.id), updateData);
-      setVerificationParticipant(null);
-      setVerificationHuntId(null);
-
-      // Clear URL params
-      const currentUrl = window.location.href;
-      const [baseUrl] = currentUrl.split('?');
-      window.history.replaceState({}, document.title, baseUrl);
-      setVerifying(false);
+          const hostRaffles = await fetchHostRaffles();
+          if (hostRaffles.length === 0) {
+              await executeRaffleAction(null, 'SINGLE');
+          } else if (hostRaffles.length === 1) {
+              await executeRaffleAction(hostRaffles[0].id, 'SINGLE');
+          } else {
+              setActiveRaffles(hostRaffles);
+              setPendingVerifyAction('SINGLE');
+              setShowRaffleModal(true);
+              setVerifying(false);
+          }
+      } catch (e) { console.error(e); setVerifying(false); }
   };
 
   const handleMassVerify = async () => {
@@ -225,34 +283,44 @@ export const ScavengerHuntView: React.FC<ScavengerHuntViewProps> = ({ settings }
       if (completed.length === 0) { addToast("No pending players to verify.", "warning"); return; }
       
       setVerifying(true);
-      let raffleIdToAssign: string | null = null;
       try {
-          const raffleQ = query(collection(db, 'raffle_sessions'), where('active', '==', true));
-          const raffleSnap = await getDocs(raffleQ);
-          if (!raffleSnap.empty) {
-              const activeRaffle = raffleSnap.docs.find(d => {
-                  const rData = d.data();
-                  return (currentUser && rData.hostUid === currentUser.uid) || 
-                         (discordUser && rData.discordUid === discordUser.id) || 
-                         (rData.hostDevice === myDeviceId);
-              });
-              if (activeRaffle) raffleIdToAssign = activeRaffle.id;
+          const hostRaffles = await fetchHostRaffles();
+          if (hostRaffles.length === 0) {
+              await executeRaffleAction(null, 'MASS');
+          } else if (hostRaffles.length === 1) {
+              await executeRaffleAction(hostRaffles[0].id, 'MASS');
+          } else {
+              setActiveRaffles(hostRaffles);
+              setPendingVerifyAction('MASS');
+              setShowRaffleModal(true);
+              setVerifying(false);
           }
+      } catch (e) { console.error(e); setVerifying(false); }
+  };
 
-          // Process all verifications and raffle entries in parallel
-          await Promise.all(completed.map(async (p) => {
-              let updateData: any = { isVerified: true, verifiedAt: Date.now() };
-              if (raffleIdToAssign) {
-                  updateData.raffleId = raffleIdToAssign;
-                  await setDoc(doc(db, `raffle_sessions/${raffleIdToAssign}/participants`, p.id), {
-                      id: p.id, deviceId: p.deviceId, name: p.name || 'Trainer', ign: p.ign, joinedAt: Date.now(), isWinner: false, isManual: true
-                  });
-              }
-              await updateDoc(doc(db, `scavenger_hunts/${currentHunt!.id}/participants`, p.id), updateData);
-          }));
-          addToast(`Successfully verified ${completed.length} players!`, "success");
-      } catch (e) { addToast("Error during mass verification.", "error"); }
-      finally { setVerifying(false); }
+  const handleRetroactiveSync = async () => {
+      if (!currentHunt) return;
+      const toSync = participants.filter(p => p.isVerified && !p.raffleId);
+      if (toSync.length === 0) {
+          addToast("No verified players missing raffle sync.", "warning");
+          return;
+      }
+      
+      setVerifying(true);
+      try {
+          const hostRaffles = await fetchHostRaffles();
+          if (hostRaffles.length === 0) {
+              addToast("No active raffles found to sync to.", "error");
+              setVerifying(false);
+          } else if (hostRaffles.length === 1) {
+              await executeRaffleAction(hostRaffles[0].id, 'RETROACTIVE');
+          } else {
+              setActiveRaffles(hostRaffles);
+              setPendingVerifyAction('RETROACTIVE');
+              setShowRaffleModal(true);
+              setVerifying(false);
+          }
+      } catch (e) { console.error(e); setVerifying(false); }
   };
 
   const handleUnverify = async (p: any) => {
@@ -684,7 +752,10 @@ export const ScavengerHuntView: React.FC<ScavengerHuntViewProps> = ({ settings }
                 </div>
                 <div className="flex justify-between items-center mb-4 text-xs font-bold text-gray-500 uppercase">
                     <div className="text-xs font-bold text-gray-500 uppercase">Players ({participants.length})</div>
-                    <Button onClick={handleMassVerify} variant="secondary" className="h-8 text-xs bg-green-900/20 text-green-400 border-green-500 hover:bg-green-600 hover:text-white transition-colors">Verify All Completed</Button>
+                    <div className="flex gap-2">
+                        <Button onClick={handleRetroactiveSync} variant="secondary" className="h-8 text-xs bg-purple-900/20 text-purple-400 border-purple-500 hover:bg-purple-600 hover:text-white transition-colors">Sync Missing to Raffle</Button>
+                        <Button onClick={handleMassVerify} variant="secondary" className="h-8 text-xs bg-green-900/20 text-green-400 border-green-500 hover:bg-green-600 hover:text-white transition-colors">Verify All Completed</Button>
+                    </div>
                 </div>
                             <div className="space-y-2">
                                 {participants.length === 0 && <div className="text-center text-gray-700 text-xs py-10 italic">Waiting for entries...</div>}
@@ -738,6 +809,39 @@ export const ScavengerHuntView: React.FC<ScavengerHuntViewProps> = ({ settings }
                                 })}
                             </div>
             </div>
+            
+            {/* RAFFLE SELECTION MODAL */}
+            <AnimatePresence>
+                {showRaffleModal && (
+                    <MotionDiv initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-50 bg-black/95 flex flex-col items-center justify-center p-6 text-white text-center">
+                        <div className="bg-gray-900 border border-gray-800 p-6 rounded-xl shadow-2xl w-full max-w-sm flex flex-col items-center gap-4" onClick={e => e.stopPropagation()}>
+                            <h2 className="text-xl font-black uppercase tracking-wider text-purple-400">Select Destination Raffle</h2>
+                            <p className="text-sm text-gray-400">Where should these entries go?</p>
+                            
+                            <div className="w-full space-y-2 mt-4">
+                                {activeRaffles.map(r => (
+                                    <button 
+                                        key={r.id} 
+                                        onClick={() => executeRaffleAction(r.id)}
+                                        disabled={verifying}
+                                        className="w-full p-4 rounded-xl bg-gray-800 border-2 border-purple-500 text-white font-bold text-lg hover:bg-purple-600 transition-colors disabled:opacity-50"
+                                    >
+                                        {r.raffleName || 'Unnamed Raffle'} (ID: {r.id.substr(0,4)})
+                                    </button>
+                                ))}
+                            </div>
+                            
+                            <Button variant="secondary" className="mt-4 border-gray-700 bg-gray-800 text-white" onClick={() => {
+                                setShowRaffleModal(false);
+                                setPendingVerifyAction(null);
+                                setVerificationParticipant(null);
+                                setVerificationHuntId(null);
+                            }}>Cancel</Button>
+                        </div>
+                    </MotionDiv>
+                )}
+            </AnimatePresence>
+            
         </div>
       )
   }
