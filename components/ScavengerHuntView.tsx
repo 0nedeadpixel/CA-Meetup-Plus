@@ -1,6 +1,6 @@
 
 import React, { useEffect, useState } from 'react';
-import { ArrowLeft, Map, Plus, Trash2, Edit2, Save, X, Navigation, LocateFixed, Eye, EyeOff, Lock, ChevronRight, GripVertical, QrCode, Share2, Copy, AlertTriangle, Users, Shuffle, ListOrdered, Search, User, Link as LinkIcon, Check, Play, CheckCircle, ClipboardList } from 'lucide-react';
+import { ArrowLeft, Map, Plus, Trash2, Edit2, Save, X, Navigation, LocateFixed, Eye, EyeOff, Lock, ChevronRight, GripVertical, QrCode, Share2, Copy, AlertTriangle, Users, Shuffle, ListOrdered, Search, User, Link as LinkIcon, Check, Play, CheckCircle, ClipboardList, Archive, RefreshCw, Maximize2 } from 'lucide-react';
 // @ts-ignore
 import { useNavigate } from 'react-router-dom';
 import { Button } from './Button';
@@ -415,6 +415,17 @@ export const ScavengerHuntView: React.FC<ScavengerHuntViewProps> = ({ settings }
       setShowDeleteModal(false);
   };
 
+  const handleToggleActive = async (hunt: ScavengerHunt) => {
+      try {
+          await updateDoc(doc(db, 'scavenger_hunts', hunt.id), {
+              active: !hunt.active
+          });
+          addToast(hunt.active ? "Hunt ended and archived." : "Hunt reactivated.", "info");
+      } catch (e) {
+          addToast("Error updating hunt status.", "error");
+      }
+  };
+
   const handleMonitor = (hunt: ScavengerHunt) => {
       setCurrentHunt(hunt);
       setViewState('MONITOR');
@@ -524,15 +535,21 @@ export const ScavengerHuntView: React.FC<ScavengerHuntViewProps> = ({ settings }
                 </button>
 
                 {hunts.map((hunt, index) => (
-                    <div key={hunt.id || index} className="bg-gray-900 border border-gray-800 p-4">
+                    <div key={hunt.id || index} className={`bg-gray-900 border border-gray-800 p-4 transition-opacity duration-200 ${!hunt.active ? 'opacity-50' : ''}`}>
                         <div className="flex justify-between items-start mb-2">
                             <div>
-                                <h3 className="text-lg font-bold text-white">{hunt.title || 'Untitled Hunt'}</h3>
-                                <div className="text-xs text-gray-500 flex items-center gap-2">
+                                <h3 className="text-lg font-bold text-white flex items-center gap-2">
+                                    {hunt.title || 'Untitled Hunt'}
+                                    {!hunt.active && <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-red-900/40 text-red-400 border border-red-500/30 tracking-widest">ENDED</span>}
+                                </h3>
+                                <div className="text-xs text-gray-500 flex items-center gap-2 mt-1">
                                     <Map size={12}/> {hunt.scavengerLayers ? hunt.scavengerLayers.reduce((acc: number, layer: any) => acc + (layer.targets?.length || 0), 0) : (hunt.pokemonPool?.length || 0)} Pokémon listed
                                 </div>
                             </div>
                             <div className="flex gap-2">
+                                <button onClick={() => handleToggleActive(hunt)} className="p-2 justify-center items-center flex bg-gray-800 text-gray-400 hover:text-white transition-colors group" title={hunt.active ? "Archive/End Hunt" : "Reactivate Hunt"}>
+                                    {hunt.active ? <Archive size={16} className="group-hover:text-yellow-400" /> : <RefreshCw size={16} className="group-hover:text-green-400" />}
+                                </button>
                                 <button onClick={() => handleMonitor(hunt)} className="p-2 bg-blue-900/20 text-blue-400 hover:bg-blue-900/40"><Users size={16}/></button>
                                 <button onClick={() => handleEditHunt(hunt)} className="p-2 bg-gray-800 text-gray-400 hover:text-white"><Edit2 size={16}/></button>
                                 <button onClick={() => { setItemToDelete(hunt.id); setShowDeleteModal(true); }} className="p-2 bg-gray-800 text-gray-400 hover:text-red-400"><Trash2 size={16}/></button>
@@ -628,8 +645,19 @@ export const ScavengerHuntView: React.FC<ScavengerHuntViewProps> = ({ settings }
             <AnimatePresence>
                 {showQrModal && (
                     <MotionDiv initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-50 bg-black/95 flex flex-col items-center justify-center p-6" onClick={() => setShowQrModal(false)}>
-                        <div className="bg-white p-6" onClick={e => e.stopPropagation()}><QRCodeSVG value={constructJoinUrl()} size={250} /></div>
-                        <div className="mt-8"><button onClick={handleCopyLink} className="px-6 py-3 bg-gray-800 rounded-full text-sm font-bold flex items-center gap-2">{linkCopied ? <Check size={16}/> : <LinkIcon size={16}/>} {linkCopied ? 'Copied' : 'Copy Link'}</button></div>
+                        <button onClick={() => setShowQrModal(false)} className="absolute top-6 right-6 p-2 bg-gray-800 hover:bg-gray-700 rounded-full text-white transition-colors"><X size={32} /></button>
+                        
+                        <h2 className="text-green-400 text-3xl font-black mb-6 uppercase tracking-wider text-center drop-shadow-lg">Join Scavenger Hunt</h2>
+                        
+                        <div className="bg-white p-6 rounded-2xl shadow-[0_0_40px_rgba(34,197,94,0.3)] border-4 border-green-500/20" onClick={e => e.stopPropagation()}>
+                            <QRCodeSVG value={constructJoinUrl()} size={window.innerWidth > 400 ? 350 : 250} />
+                        </div>
+                        
+                        <div className="mt-8">
+                            <button onClick={handleCopyLink} className={`px-8 py-4 rounded-full text-sm font-black uppercase tracking-wider flex items-center gap-2 transition-all ${linkCopied ? 'bg-green-500 text-white scale-105' : 'bg-green-900/50 text-green-300 border border-green-500/50 hover:bg-green-800/50'}`}>
+                                {linkCopied ? <Check size={18} /> : <LinkIcon size={18}/>} {linkCopied ? 'Link Copied!' : 'Copy Direct Link'}
+                            </button>
+                        </div>
                     </MotionDiv>
                 )}
             </AnimatePresence>
@@ -639,10 +667,21 @@ export const ScavengerHuntView: React.FC<ScavengerHuntViewProps> = ({ settings }
                     <button onClick={() => setViewState('LIST')} className="p-2 bg-gray-800 rounded-full border border-gray-700 text-gray-400 hover:text-white"><ArrowLeft size={20}/></button>
                     <div><h2 className="text-xl font-bold">{currentHunt.title}</h2><p className="text-xs text-gray-500">Live Monitor</p></div>
                 </div>
-                <button onClick={() => setShowQrModal(true)} className="p-2 bg-green-600 rounded-full text-white hover:bg-green-500"><QrCode size={20}/></button>
             </div>
 
             <div className="flex-1 overflow-y-auto p-4">
+                {/* Share Card */}
+                <div className="bg-gray-900 border border-green-500/30 p-8 flex flex-col items-center justify-center text-center shadow-xl w-full rounded-2xl relative overflow-hidden mb-6">
+                    <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-green-500 to-transparent" />
+                    <h3 className="text-green-400 font-black text-2xl mb-6 uppercase tracking-widest">Join Scavenger Hunt</h3>
+                    <div className="bg-white p-4 rounded-xl shadow-[0_0_20px_rgba(34,197,94,0.15)] mb-6">
+                        <QRCodeSVG value={constructJoinUrl()} size={200} />
+                    </div>
+                    <div className="flex gap-3">
+                        <button onClick={() => setShowQrModal(true)} className="px-5 py-2.5 bg-gray-800 rounded-full text-xs font-bold text-gray-300 flex items-center gap-2 hover:bg-gray-700 hover:text-white border border-gray-700 transition-colors"><Maximize2 size={14}/> Fullscreen</button>
+                        <button onClick={handleCopyLink} className={`px-5 py-2.5 rounded-full text-xs font-bold flex items-center gap-2 transition-colors border ${linkCopied ? 'bg-green-500 border-green-500 text-white' : 'bg-green-900/30 border-green-500/50 text-green-400 hover:bg-green-900/50'}`}>{linkCopied ? <Check size={14} /> : <LinkIcon size={14}/>} {linkCopied ? 'Copied!' : 'Copy Link'}</button>
+                    </div>
+                </div>
                 <div className="flex justify-between items-center mb-4 text-xs font-bold text-gray-500 uppercase">
                     <div className="text-xs font-bold text-gray-500 uppercase">Players ({participants.length})</div>
                     <Button onClick={handleMassVerify} variant="secondary" className="h-8 text-xs bg-green-900/20 text-green-400 border-green-500 hover:bg-green-600 hover:text-white transition-colors">Verify All Completed</Button>

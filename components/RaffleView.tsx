@@ -1498,10 +1498,19 @@ export const RaffleView: React.FC<RaffleViewProps> = ({ settings, codes = [], on
         <AnimatePresence>
             {showQrModal && (
                 <MotionDiv initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-50 bg-black/95 flex flex-col items-center justify-center p-6" onClick={() => setShowQrModal(false)}>
-                    <button onClick={() => setShowQrModal(false)} className="absolute top-6 right-6 p-2 bg-gray-800 rounded-full text-white"><X size={32} /></button>
-                    <div className="bg-white p-6" onClick={e => e.stopPropagation()}><QRCodeSVG value={constructJoinUrl()} size={window.innerWidth > 400 ? 350 : 250} /></div>
-                    <h2 className="text-white text-2xl font-bold mt-8">Scan to Join</h2>
-                    <div className="mt-8"><button onClick={handleCopyLink} className={`px-6 py-3 rounded-full text-sm font-bold flex items-center gap-2 transition-colors ${linkCopied ? 'bg-green-100 text-green-700' : 'bg-purple-100 text-purple-700'}`}>{linkCopied ? <Check size={16} /> : <LinkIcon size={16}/>} {linkCopied ? 'Link Copied!' : 'Copy Link'}</button></div>
+                    <button onClick={() => setShowQrModal(false)} className="absolute top-6 right-6 p-2 bg-gray-800 hover:bg-gray-700 rounded-full text-white transition-colors"><X size={32} /></button>
+                    
+                    <h2 className="text-purple-400 text-3xl font-black mb-6 uppercase tracking-wider text-center drop-shadow-lg">Join Live Raffle</h2>
+                    
+                    <div className="bg-white p-6 rounded-2xl shadow-[0_0_40px_rgba(168,85,247,0.3)] border-4 border-purple-500/20" onClick={e => e.stopPropagation()}>
+                        <QRCodeSVG value={constructJoinUrl()} size={window.innerWidth > 400 ? 350 : 250} />
+                    </div>
+                    
+                    <div className="mt-8">
+                        <button onClick={handleCopyLink} className={`px-8 py-4 rounded-full text-sm font-black uppercase tracking-wider flex items-center gap-2 transition-all ${linkCopied ? 'bg-purple-500 text-white scale-105' : 'bg-purple-900/50 text-purple-300 border border-purple-500/50 hover:bg-purple-800/50'}`}>
+                            {linkCopied ? <Check size={18} /> : <LinkIcon size={18}/>} {linkCopied ? 'Link Copied!' : 'Copy Direct Link'}
+                        </button>
+                    </div>
                 </MotionDiv>
             )}
         </AnimatePresence>
@@ -1560,9 +1569,16 @@ export const RaffleView: React.FC<RaffleViewProps> = ({ settings, codes = [], on
             )}
             {sessionStep === 1 && (
                 <div className="max-w-lg mx-auto flex flex-col gap-6">
-                    <div className="bg-white p-6 flex flex-col items-center justify-center text-center shadow-xl w-full">
-                        <QRCodeSVG value={constructJoinUrl()} size={200} /><h3 className="text-black font-bold text-2xl mt-4">Scan to Join</h3><p className="text-gray-500 text-sm mt-1 mb-4">Users can join from their phones.</p>
-                        <div className="flex gap-2"><button onClick={() => setShowQrModal(true)} className="px-4 py-2 bg-gray-100 rounded-full text-xs font-bold text-gray-700 flex items-center gap-2 hover:bg-gray-200 transition-colors"><Maximize2 size={14}/> Fullscreen</button><button onClick={handleCopyLink} className={`px-4 py-2 rounded-full text-xs font-bold flex items-center gap-2 transition-colors ${linkCopied ? 'bg-green-100 text-green-700' : 'bg-purple-100 text-purple-700'}`}>{linkCopied ? <Check size={14} /> : <LinkIcon size={14}/>} {linkCopied ? 'Copied!' : 'Copy Link'}</button></div>
+                    <div className="bg-gray-900 border border-purple-500/30 p-8 flex flex-col items-center justify-center text-center shadow-xl w-full rounded-2xl relative overflow-hidden">
+                        <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-purple-500 to-transparent" />
+                        <h3 className="text-purple-400 font-black text-2xl mb-6 uppercase tracking-widest">Join Live Raffle</h3>
+                        <div className="bg-white p-4 rounded-xl shadow-[0_0_20px_rgba(168,85,247,0.15)] mb-6">
+                            <QRCodeSVG value={constructJoinUrl()} size={200} />
+                        </div>
+                        <div className="flex gap-3">
+                            <button onClick={() => setShowQrModal(true)} className="px-5 py-2.5 bg-gray-800 rounded-full text-xs font-bold text-gray-300 flex items-center gap-2 hover:bg-gray-700 hover:text-white border border-gray-700 transition-colors"><Maximize2 size={14}/> Fullscreen</button>
+                            <button onClick={handleCopyLink} className={`px-5 py-2.5 rounded-full text-xs font-bold flex items-center gap-2 transition-colors border ${linkCopied ? 'bg-purple-500 border-purple-500 text-white' : 'bg-purple-900/30 border-purple-500/50 text-purple-400 hover:bg-purple-900/50'}`}>{linkCopied ? <Check size={14} /> : <LinkIcon size={14}/>} {linkCopied ? 'Copied!' : 'Copy Link'}</button>
+                        </div>
                     </div>
                     <div className="flex-1 flex flex-col bg-gray-900 border border-gray-800 overflow-hidden"><div className="p-4 border-b border-gray-800"><h3 className="font-bold flex items-center gap-2"><ClipboardList className="text-purple-400"/> Manual Entry</h3><div className="flex gap-2"><textarea value={manualInput} onChange={(e) => setManualInput(e.target.value)} placeholder="Ash Ketchum..." className="flex-1 bg-gray-950 border border-gray-800 p-2 text-sm h-20 resize-none outline-none" /><Button variant="secondary" onClick={addManualEntries} className="h-auto">Add</Button></div></div>
                         <div className="flex-1 p-4"><div className="flex justify-between items-center mb-2"><span className="text-xs font-bold text-gray-400 uppercase">Total Entries ({participants.length})</span><button onClick={handleExportAll} className="text-xs text-purple-400 hover:text-white flex items-center gap-1"><Download size={12}/> CSV</button></div>

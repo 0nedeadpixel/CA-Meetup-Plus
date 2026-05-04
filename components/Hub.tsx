@@ -481,7 +481,7 @@ export const Hub: React.FC<HubProps> = ({
       shadowColor: (isSuperAdmin || discordRole === 'host') ? "shadow-green-500/20" : "shadow-none",
       active: isSuperAdmin || discordRole === 'host',
       locked: !(isSuperAdmin || discordRole === 'host'),
-      badge: "ALPHA",
+      badge: "BETA",
     },
   ];
 
@@ -1240,13 +1240,14 @@ export const Hub: React.FC<HubProps> = ({
           ))}
         </div>
 
-        <div className="mt-4 text-center pb-8">
+        <div className="mt-4 text-center pb-8 flex flex-col items-center gap-2">
           <button
             onClick={() => setIsPrivacyOpen(true)}
             className="text-[10px] text-gray-600 font-bold uppercase tracking-widest flex items-center justify-center gap-1.5 mx-auto hover:text-gray-400 transition-colors"
           >
             <Shield size={12} /> Privacy Policy & Data Usage
           </button>
+          <span className="text-[9px] text-gray-700 font-mono font-bold tracking-widest">v3.01</span>
         </div>
       </div>
 

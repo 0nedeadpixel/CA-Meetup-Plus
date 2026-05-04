@@ -106,10 +106,6 @@ export const PrivacyModal: React.FC<PrivacyModalProps> = ({ isOpen, onClose }) =
                     </div>
                 )}
               </section>
-
-              <div className="text-[10px] text-gray-500 text-center pt-4 italic">
-                Last Updated: April 2026 • Version 2.415
-              </div>
             </div>
 
             <div className="p-6 border-t border-gray-800 bg-gray-900/50">

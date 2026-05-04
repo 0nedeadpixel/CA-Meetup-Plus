@@ -534,9 +534,9 @@ export const DistributorView: React.FC<DistributorProps> = ({ codes, onSessionCo
       {/* Main Area */}
       <div className="flex-1 flex flex-col items-center justify-start w-full max-w-md mx-auto px-4 pb-12 gap-6 print:pb-0 print:pt-10 pt-6">
         
-        {/* QR Card - Uniform Design */}
-        <div className={`relative w-full bg-white p-4  shadow-2xl flex flex-col items-center justify-center text-center transition-opacity print:shadow-none print:max-w-[500px]
-            ${status === 'cap_reached' ? 'opacity-50 grayscale' : ''}`}>
+        {/* QR Card - Unified Share Card Design */}
+        <div className={`bg-gray-900 border border-orange-500/30 p-8 flex flex-col items-center justify-center text-center shadow-xl w-full rounded-2xl relative overflow-hidden mb-6 transition-opacity print:bg-white print:border-none print:shadow-none print:p-0 print:mb-0 ${status === 'cap_reached' ? 'opacity-50 grayscale' : ''}`}>
+            <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-orange-500 to-transparent print:hidden" />
             
             {/* FLOATING ISSUE INDICATOR */}
             <button
@@ -554,7 +554,7 @@ export const DistributorView: React.FC<DistributorProps> = ({ codes, onSessionCo
                         ? 'bg-red-100 text-red-600 hover:bg-red-200' 
                         : isIssueMode 
                             ? 'bg-green-400 text-white shadow-[0_0_15px_rgba(74,222,128,0.6)] animate-pulse' 
-                            : 'bg-gray-100 text-gray-400 hover:text-gray-600'
+                            : 'bg-gray-800 text-gray-400 hover:text-gray-200 border border-gray-700'
                 }`}
                 title={pendingReportsCount > 0 ? "View Reports" : "Toggle Issue Mode"}
             >
@@ -568,35 +568,25 @@ export const DistributorView: React.FC<DistributorProps> = ({ codes, onSessionCo
                 </div>
             </button>
 
-            <QRCodeSVG value={constructUrl()} size={250} level="M" includeMargin={true} />
+            <h3 className="text-orange-400 font-black text-2xl mb-6 uppercase tracking-widest print:text-black">Scan to Claim Code</h3>
             
-            <h3 className="hidden print:block text-black font-bold text-2xl">Scan to Claim Code</h3>
-            <h3 className="print:hidden text-black font-bold text-2xl">Scan to Claim</h3>
-
-            <div className="flex gap-2 print:hidden mt-4">
-                <button 
-                    onClick={() => setShowQrModal(true)} 
-                    className="px-4 py-2 bg-gray-100 rounded-full text-xs font-bold text-gray-700 flex items-center gap-2 hover:bg-gray-200 transition-colors"
-                >
-                    <Maximize2 size={14}/> Fullscreen
-                </button>
-                <button 
-                    onClick={handleCopyLink} 
-                    className={`px-4 py-2 rounded-full text-xs font-bold flex items-center gap-2 transition-colors ${linkCopied ? 'bg-green-100 text-green-700' : 'bg-orange-100 text-orange-700'}`}
-                >
-                    {linkCopied ? <Check size={14} /> : <LinkIcon size={14}/>} 
-                    {linkCopied ? 'Link Copied!' : 'Copy Link'}
-                </button>
+            <div className="bg-white p-4 rounded-xl shadow-[0_0_20px_rgba(249,115,22,0.15)] mb-6 print:shadow-none print:p-0 print:mb-6">
+                <QRCodeSVG value={constructUrl()} size={200} level="M" includeMargin={true} />
+            </div>
+            
+            <div className="flex gap-3 print:hidden">
+                <button onClick={() => setShowQrModal(true)} className="px-5 py-2.5 bg-gray-800 rounded-full text-xs font-bold text-gray-300 flex items-center gap-2 hover:bg-gray-700 hover:text-white border border-gray-700 transition-colors"><Maximize2 size={14}/> Fullscreen</button>
+                <button onClick={handleCopyLink} className={`px-5 py-2.5 rounded-full text-xs font-bold flex items-center gap-2 transition-colors border ${linkCopied ? 'bg-orange-500 border-orange-500 text-white' : 'bg-orange-900/30 border-orange-500/50 text-orange-400 hover:bg-orange-900/50'}`}>{linkCopied ? <Check size={14} /> : <LinkIcon size={14}/>} {linkCopied ? 'Copied!' : 'Copy Link'}</button>
             </div>
 
             {status === 'cap_reached' && (
                 <div className="absolute inset-0 flex items-center justify-center bg-gray-900/80 print:hidden z-20">
-                     <span className="text-red-500 font-bold text-xl rotate-[-12deg] border-2 border-red-500 px-4 py-2">SESSION ENDED</span>
+                     <span className="text-red-500 font-bold text-xl rotate-[-12deg] border-2 border-red-500 bg-gray-900 px-4 py-2">SESSION ENDED</span>
                 </div>
             )}
             {status === 'paused' && (
                 <div className="absolute inset-0 flex items-center justify-center bg-gray-900/80 print:hidden z-20">
-                     <span className="text-yellow-500 font-bold text-xl border-2 border-yellow-500 px-4 py-2 flex gap-2 items-center">
+                     <span className="text-yellow-500 font-bold text-xl border-2 border-yellow-500 bg-gray-900 px-4 py-2 flex gap-2 items-center">
                         <PauseCircle /> PAUSED
                      </span>
                 </div>
@@ -798,10 +788,19 @@ export const DistributorView: React.FC<DistributorProps> = ({ codes, onSessionCo
       <AnimatePresence>
           {showQrModal && (
               <MotionDiv initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-50 bg-black/95 flex flex-col items-center justify-center p-6" onClick={() => setShowQrModal(false)}>
-                  <button onClick={() => setShowQrModal(false)} className="absolute top-6 right-6 p-2 bg-gray-800 rounded-full text-white"><X size={32} /></button>
-                  <div className="bg-white p-6" onClick={e => e.stopPropagation()}><QRCodeSVG value={constructUrl()} size={window.innerWidth > 400 ? 350 : 250} /></div>
-                  <h2 className="text-white text-2xl font-bold mt-8">Scan to Claim</h2>
-                  <div className="mt-8"><button onClick={handleCopyLink} className={`px-6 py-3 rounded-full text-sm font-bold flex items-center gap-2 transition-colors ${linkCopied ? 'bg-green-100 text-green-700' : 'bg-orange-100 text-orange-700'}`}>{linkCopied ? <Check size={16} /> : <LinkIcon size={16}/>} {linkCopied ? 'Link Copied!' : 'Copy Link'}</button></div>
+                  <button onClick={() => setShowQrModal(false)} className="absolute top-6 right-6 p-2 bg-gray-800 hover:bg-gray-700 rounded-full text-white transition-colors"><X size={32} /></button>
+                  
+                  <h2 className="text-orange-400 text-3xl font-black mb-6 uppercase tracking-wider text-center drop-shadow-lg">Code Distributor</h2>
+                  
+                  <div className="bg-white p-6 rounded-2xl shadow-[0_0_40px_rgba(249,115,22,0.3)] border-4 border-orange-500/20" onClick={e => e.stopPropagation()}>
+                      <QRCodeSVG value={constructUrl()} size={window.innerWidth > 400 ? 350 : 250} level="M" includeMargin={true} />
+                  </div>
+                  
+                  <div className="mt-8">
+                      <button onClick={handleCopyLink} className={`px-8 py-4 rounded-full text-sm font-black uppercase tracking-wider flex items-center gap-2 transition-all ${linkCopied ? 'bg-orange-500 text-white scale-105' : 'bg-orange-900/50 text-orange-300 border border-orange-500/50 hover:bg-orange-800/50'}`}>
+                          {linkCopied ? <Check size={18} /> : <LinkIcon size={18}/>} {linkCopied ? 'Link Copied!' : 'Copy Direct Link'}
+                      </button>
+                  </div>
               </MotionDiv>
           )}
       </AnimatePresence>

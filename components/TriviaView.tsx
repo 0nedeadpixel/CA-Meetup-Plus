@@ -609,23 +609,15 @@ export const TriviaView: React.FC<TriviaViewProps> = ({ settings }) => {
             <div className="flex-1 overflow-y-auto p-4 md:p-8">
                 <div className="max-w-4xl mx-auto w-full space-y-6">
                     {/* 1. Share Card (White Theme like Self-Paced) */}
-                    <div className="bg-white p-4 flex flex-col items-center justify-center shadow-2xl relative">
-                        <QRCodeSVG value={constructJoinUrl()} size={250} includeMargin={true} />
-                        <h3 className="text-black font-bold text-2xl mt-4">Scan to Join</h3>
-                        <div className="flex gap-2 mt-4 mb-2">
-                            <button 
-                                onClick={() => setShowQrModal(true)} 
-                                className="px-4 py-2 bg-gray-100 rounded-full text-xs font-bold text-gray-700 flex items-center gap-2 hover:bg-gray-200 transition-colors"
-                            >
-                                <Maximize2 size={14}/> Fullscreen
-                            </button>
-                            <button 
-                                onClick={handleCopyLink} 
-                                className={`px-4 py-2 rounded-full text-xs font-bold flex items-center gap-2 transition-colors ${linkCopied ? 'bg-green-100 text-green-700' : 'bg-orange-100 text-orange-700 hover:bg-orange-200'}`}
-                            >
-                                {linkCopied ? <Check size={14}/> : <LinkIcon size={14}/>}
-                                {linkCopied ? 'Link Copied!' : 'Copy Link'}
-                            </button>
+                    <div className="bg-gray-900 border border-blue-500/30 p-8 flex flex-col items-center justify-center text-center shadow-xl w-full rounded-2xl relative overflow-hidden mb-6">
+                        <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-blue-500 to-transparent" />
+                        <h3 className="text-blue-400 font-black text-2xl mb-6 uppercase tracking-widest">Join Trivia Game</h3>
+                        <div className="bg-white p-4 rounded-xl shadow-[0_0_20px_rgba(59,130,246,0.15)] mb-6">
+                            <QRCodeSVG value={constructJoinUrl()} size={200} />
+                        </div>
+                        <div className="flex gap-3">
+                            <button onClick={() => setShowQrModal(true)} className="px-5 py-2.5 bg-gray-800 rounded-full text-xs font-bold text-gray-300 flex items-center gap-2 hover:bg-gray-700 hover:text-white border border-gray-700 transition-colors"><Maximize2 size={14}/> Fullscreen</button>
+                            <button onClick={handleCopyLink} className={`px-5 py-2.5 rounded-full text-xs font-bold flex items-center gap-2 transition-colors border ${linkCopied ? 'bg-blue-500 border-blue-500 text-white' : 'bg-blue-900/30 border-blue-500/50 text-blue-400 hover:bg-blue-900/50'}`}>{linkCopied ? <Check size={14} /> : <LinkIcon size={14}/>} {linkCopied ? 'Copied!' : 'Copy Link'}</button>
                         </div>
                     </div>
 
@@ -1093,23 +1085,15 @@ export const TriviaView: React.FC<TriviaViewProps> = ({ settings }) => {
                 <div className="flex-1 overflow-y-auto p-4">
                     {/* Share Card (Only if active) */}
                     {isActive && (
-                        <div className="bg-white p-4 flex flex-col items-center justify-center mb-6 shadow-2xl relative">
-                            <QRCodeSVG value={constructJoinUrl()} size={250} includeMargin={true} />
-                            <h3 className="text-black font-bold text-2xl mt-4">Scan to Join</h3>
-                            <div className="flex gap-2 mt-4 mb-2">
-                                <button 
-                                    onClick={() => setShowQrModal(true)} 
-                                    className="px-4 py-2 bg-gray-100 rounded-full text-xs font-bold text-gray-700 flex items-center gap-2 hover:bg-gray-200 transition-colors"
-                                >
-                                    <Maximize2 size={14}/> Fullscreen
-                                </button>
-                                <button 
-                                    onClick={handleCopyLink} 
-                                    className={`px-4 py-2 rounded-full text-xs font-bold flex items-center gap-2 transition-colors ${linkCopied ? 'bg-green-100 text-green-700' : 'bg-orange-100 text-orange-700 hover:bg-orange-200'}`}
-                                >
-                                    {linkCopied ? <Check size={14}/> : <LinkIcon size={14}/>}
-                                    {linkCopied ? 'Link Copied!' : 'Copy Link'}
-                                </button>
+                        <div className="bg-gray-900 border border-blue-500/30 p-8 flex flex-col items-center justify-center text-center shadow-xl w-full rounded-2xl relative overflow-hidden mb-6">
+                            <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-blue-500 to-transparent" />
+                            <h3 className="text-blue-400 font-black text-2xl mb-6 uppercase tracking-widest">Join Trivia Game</h3>
+                            <div className="bg-white p-4 rounded-xl shadow-[0_0_20px_rgba(59,130,246,0.15)] mb-6">
+                                <QRCodeSVG value={constructJoinUrl()} size={200} />
+                            </div>
+                            <div className="flex gap-3">
+                                <button onClick={() => setShowQrModal(true)} className="px-5 py-2.5 bg-gray-800 rounded-full text-xs font-bold text-gray-300 flex items-center gap-2 hover:bg-gray-700 hover:text-white border border-gray-700 transition-colors"><Maximize2 size={14}/> Fullscreen</button>
+                                <button onClick={handleCopyLink} className={`px-5 py-2.5 rounded-full text-xs font-bold flex items-center gap-2 transition-colors border ${linkCopied ? 'bg-blue-500 border-blue-500 text-white' : 'bg-blue-900/30 border-blue-500/50 text-blue-400 hover:bg-blue-900/50'}`}>{linkCopied ? <Check size={14} /> : <LinkIcon size={14}/>} {linkCopied ? 'Copied!' : 'Copy Link'}</button>
                             </div>
                         </div>
                     )}
@@ -1228,15 +1212,18 @@ export const TriviaView: React.FC<TriviaViewProps> = ({ settings }) => {
                 <AnimatePresence>
                     {showQrModal && (
                         <MotionDiv initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-50 bg-black/95 flex flex-col items-center justify-center p-6" onClick={() => setShowQrModal(false)}>
-                            <button onClick={() => setShowQrModal(false)} className="absolute top-6 right-6 p-2 bg-gray-800 rounded-full text-white"><X size={32} /></button>
-                            <div className="bg-white p-6 flex flex-col items-center justify-center relative shadow-2xl" onClick={e => e.stopPropagation()}>
-                                <QRCodeSVG value={constructJoinUrl()} size={window.innerWidth > 400 ? 350 : 250} includeMargin={true} />
-                                <h3 className="text-black font-bold text-2xl mt-4">Scan to Join</h3>
-                                <div className="mt-6 mb-2">
-                                    <button onClick={handleCopyLink} className={`px-6 py-3 rounded-full text-sm font-bold flex items-center gap-2 transition-colors ${linkCopied ? 'bg-green-100 text-green-700' : 'bg-orange-100 text-orange-700 hover:bg-orange-200'}`}>
-                                        {linkCopied ? <Check size={16} /> : <LinkIcon size={16}/>} {linkCopied ? 'Link Copied!' : 'Copy Link'}
-                                    </button>
-                                </div>
+                            <button onClick={() => setShowQrModal(false)} className="absolute top-6 right-6 p-2 bg-gray-800 hover:bg-gray-700 rounded-full text-white transition-colors"><X size={32} /></button>
+                            
+                            <h2 className="text-blue-400 text-3xl font-black mb-6 uppercase tracking-wider text-center drop-shadow-lg">Join Trivia Game</h2>
+                            
+                            <div className="bg-white p-6 rounded-2xl shadow-[0_0_40px_rgba(59,130,246,0.3)] border-4 border-blue-500/20" onClick={e => e.stopPropagation()}>
+                                <QRCodeSVG value={constructJoinUrl()} size={window.innerWidth > 400 ? 350 : 250} />
+                            </div>
+                            
+                            <div className="mt-8">
+                                <button onClick={handleCopyLink} className={`px-8 py-4 rounded-full text-sm font-black uppercase tracking-wider flex items-center gap-2 transition-all ${linkCopied ? 'bg-blue-500 text-white scale-105' : 'bg-blue-900/50 text-blue-300 border border-blue-500/50 hover:bg-blue-800/50'}`}>
+                                    {linkCopied ? <Check size={18} /> : <LinkIcon size={18}/>} {linkCopied ? 'Link Copied!' : 'Copy Direct Link'}
+                                </button>
                             </div>
                         </MotionDiv>
                     )}
