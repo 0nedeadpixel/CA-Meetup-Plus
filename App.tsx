@@ -306,7 +306,7 @@ const App: React.FC = () => {
               <DistributorView 
                 codes={codes}
                 onSessionComplete={handleSyncSession}
-                onExit={() => navigate('/distributor')}
+                onExit={() => navigate(-1)}
                 settings={settings}
               />
           } />
