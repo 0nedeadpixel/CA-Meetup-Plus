@@ -1247,7 +1247,7 @@ export const Hub: React.FC<HubProps> = ({
           >
             <Shield size={12} /> Privacy Policy & Data Usage
           </button>
-          <span className="text-[9px] text-gray-700 font-mono font-bold tracking-widest">v3.01</span>
+          <span className="text-[9px] text-gray-700 font-mono font-bold tracking-widest">{globalConfig?.appVersion || 'v3.0.2'}</span>
         </div>
       </div>
 

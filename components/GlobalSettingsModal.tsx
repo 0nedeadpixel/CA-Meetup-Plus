@@ -25,6 +25,7 @@ const Toggle = ({ label, checked, onChange }: any) => (
 export const GlobalSettingsModal: React.FC<GlobalSettingsModalProps> = ({ isOpen, onClose }) => {
     const [footerText, setFooterText] = useState('Fullerton GO!');
     const [footerLink, setFooterLink] = useState('https://www.instagram.com/fullertonpogo/');
+    const [appVersion, setAppVersion] = useState('');
 
     // Announcement Settings
     const [announceActive, setAnnounceActive] = useState(false);
@@ -56,6 +57,7 @@ export const GlobalSettingsModal: React.FC<GlobalSettingsModalProps> = ({ isOpen
                         const data = snap.data();
                         if (data.footerText) setFooterText(data.footerText);
                         if (data.footerLink) setFooterLink(data.footerLink);
+                        if (data.appVersion !== undefined) setAppVersion(data.appVersion);
                         if (data.announceActive !== undefined) setAnnounceActive(data.announceActive);
                         if (data.announceTitle) setAnnounceTitle(data.announceTitle);
                         if (data.announceMessage) setAnnounceMessage(data.announceMessage);
@@ -88,7 +90,7 @@ export const GlobalSettingsModal: React.FC<GlobalSettingsModalProps> = ({ isOpen
                 footerText, footerLink, announceActive, announceTitle, announceMessage,
                 announceImage, announceHasTimer, announceTimerDate, announceRequireDiscord,
                 announceBtnText, announceBtnUrl, announceDismissible, announceOncePerDay,
-                announceSecBtnActive, announceSecBtnText, announceSecBtnUrl
+                announceSecBtnActive, announceSecBtnText, announceSecBtnUrl, appVersion
             }, { merge: true });
             addToast('Global settings saved!', 'success');
             onClose();
@@ -129,6 +131,20 @@ export const GlobalSettingsModal: React.FC<GlobalSettingsModalProps> = ({ isOpen
                         <div className="p-6 overflow-y-auto border-r border-gray-800 space-y-6">
                             {loading ? ( <div className="flex justify-center py-8"><Loader2 className="animate-spin text-purple-500" size={32} /></div> ) : (
                                 <>
+                                    <div className="space-y-4 mb-8 pb-8 border-b border-gray-800">
+                                        <h3 className="text-sm font-black text-white uppercase tracking-widest flex items-center gap-2"><Globe size={16} className="text-purple-500"/> Platform Settings</h3>
+                                        <div>
+                                            <label className="block text-xs text-gray-500 uppercase font-bold mb-2">Display Version Number</label>
+                                            <input 
+                                                type="text" 
+                                                value={appVersion}
+                                                onChange={(e) => setAppVersion(e.target.value)}
+                                                placeholder="e.g. v3.0.2"
+                                                className="w-full bg-gray-950 border border-gray-800 p-3 focus:border-purple-500 outline-none text-sm text-white font-mono"
+                                            />
+                                            <p className="text-[10px] text-gray-500 mt-1">This will display at the bottom of the Hub for all users.</p>
+                                        </div>
+                                    </div>
                                     <div className="space-y-3">
                                         <h3 className="text-sm font-black text-white uppercase tracking-widest mb-4 flex items-center gap-2"><Globe size={16} className="text-purple-500"/> Announcement Modal</h3>
                                         <Toggle label="Enable Global Modal Overlay" checked={announceActive} onChange={setAnnounceActive} />
