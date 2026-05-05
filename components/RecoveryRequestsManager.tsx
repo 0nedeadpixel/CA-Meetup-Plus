@@ -125,7 +125,10 @@ export const RecoveryRequestsManager: React.FC = () => {
         }
     };
 
-    const filteredCommunities = communities.filter(c => c.toLowerCase().includes(searchQuery.toLowerCase()));
+    const filteredCommunities = communities.filter(c => 
+        c.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase()
+         .includes(searchQuery.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase())
+    );
 
     return (
         <div className="space-y-6">
